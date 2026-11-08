@@ -1,0 +1,8 @@
+{
+  "name": "calendar-booking",
+  "private": true,
+  "workspaces": [
+    "api",
+    "frontend"
+  ]
+}

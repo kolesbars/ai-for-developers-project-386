@@ -1,0 +1,20 @@
+node_modules/
+dist/
+tsp-output/
+
+# Gradle / Kotlin
+.gradle/
+.kotlin/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Local env
+.env
+.env.local
+mise.local.toml

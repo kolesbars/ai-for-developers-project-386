@@ -1,0 +1,130 @@
+min_version = "2026.11.0"
+
+[tools]
+java = "temurin-21.0.13+9.0.LTS"
+node = "26.13.0"
+
+[env]
+BACKEND_PORT = "8080"
+BACKEND_URL = "http://localhost:8080"
+FRONTEND_PORT = "5173"
+
+# ---------- Установка ----------
+
+[tasks."install:node"]
+description = "Установить npm-зависимости (api и frontend)"
+run = "npm ci"
+
+[tasks."install:backend"]
+description = "Скачать Gradle и зависимости backend"
+dir = "backend"
+run = "./gradlew --quiet dependencies > /dev/null"
+
+[tasks.install]
+description = "Установить все зависимости"
+depends = ["install:node", "install:backend"]
+
+# ---------- Контракт API ----------
+
+[tasks."api:build"]
+description = "TypeSpec → api/openapi/openapi.yaml"
+run = "npm run build --workspace api"
+
+[tasks."api:sdk"]
+description = "OpenAPI → типизированный SDK для frontend"
+depends = ["api:build"]
+run = "npm run generate:api --workspace frontend"
+
+[tasks."api:verify"]
+description = "Проверить, что сгенерированные файлы закоммичены"
+depends = ["api:sdk"]
+run = "git diff --exit-code -- api/openapi frontend/src/api/schema.d.ts"
+
+# ---------- Запуск ----------
+
+[tasks."dev:backend"]
+description = "Запустить backend (http://localhost:8080)"
+dir = "backend"
+run = "./gradlew run"
+
+[tasks."dev:frontend"]
+description = "Запустить frontend (http://localhost:5173)"
+run = "npm run dev --workspace frontend"
+
+[tasks.dev]
+description = "Запустить backend и frontend вместе"
+depends = ["dev:backend", "dev:frontend"]
+
+# ---------- Сборка ----------
+
+[tasks."build:backend"]
+description = "Собрать backend (fat jar)"
+dir = "backend"
+run = "./gradlew buildFatJar"
+
+[tasks."build:frontend"]
+description = "Собрать frontend"
+depends = ["api:sdk"]
+run = "npm run build --workspace frontend"
+
+[tasks.build]
+description = "Собрать всё"
+depends = ["build:backend", "build:frontend"]
+
+# ---------- Линтеры и тесты ----------
+
+[tasks."lint:backend"]
+description = "ktlint"
+dir = "backend"
+run = "./gradlew ktlintCheck"
+
+[tasks."lint:frontend"]
+description = "ESLint + проверка типов"
+depends = ["api:sdk"]
+run = ["npm run lint --workspace frontend", "npm run typecheck --workspace frontend"]
+
+[tasks.lint]
+description = "Все линтеры"
+depends = ["lint:backend", "lint:frontend"]
+
+[tasks.format]
+description = "Автоисправление стиля"
+run = [
+  "cd backend && ./gradlew ktlintFormat",
+  "npm run lint --workspace frontend -- --fix",
+]
+
+[tasks."test:backend"]
+description = "Тесты backend (JUnit)"
+dir = "backend"
+run = "./gradlew test"
+
+[tasks."test:frontend"]
+description = "Тесты frontend (Vitest)"
+depends = ["api:sdk"]
+run = "npm run test --workspace frontend"
+
+[tasks.test]
+description = "Все тесты"
+depends = ["test:backend", "test:frontend"]
+
+# ---------- Всё вместе ----------
+
+[tasks."check:backend"]
+description = "Backend: ktlint + тесты + сборка (один запуск Gradle)"
+dir = "backend"
+run = "./gradlew check buildFatJar"
+
+[tasks."check:frontend"]
+description = "Frontend: lint, типы, тесты, сборка"
+depends = ["api:sdk"]
+run = [
+  "npm run lint --workspace frontend",
+  "npm run typecheck --workspace frontend",
+  "npm run test --workspace frontend",
+  "npm run build --workspace frontend",
+]
+
+[tasks.check]
+description = "Все проверки: контракт, линтеры, тесты, сборка"
+depends = ["check:backend", "check:frontend"]
