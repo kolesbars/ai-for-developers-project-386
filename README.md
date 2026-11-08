@@ -12,20 +12,66 @@
 
 ## Стек
 
-- Разное
+| Часть | Технологии |
+|---|---|
+| Контракт API | [TypeSpec](https://typespec.io) → OpenAPI 3.0.0 (`api/openapi/openapi.yaml`) |
+| Backend | Kotlin, Ktor, JDK 21, Gradle wrapper, JUnit 5, ktlint |
+| Frontend | TypeScript, React, Vite, Mantine, Vitest, ESLint |
+| SDK для frontend | генерируется из OpenAPI: `openapi-typescript` + `openapi-fetch` |
+| Инструменты и задачи | [mise](https://mise.jdx.dev) (`mise.toml`) |
+| CI | GitHub Actions → `mise run check` на каждый push |
+
+Версии JDK и Node зафиксированы в `mise.toml`, Gradle — в `backend/gradle/wrapper`,
+npm-пакеты — в `package-lock.json`.
+
+## Структура
+
+```
+api/        TypeSpec-контракт и сгенерированный openapi.yaml
+backend/    Ktor-приложение (Gradle)
+frontend/   Vite + React; src/api/schema.d.ts генерируется из OpenAPI
+mise.toml   версии инструментов, переменные окружения и задачи
+```
 
 ## Установка
 
-<!-- Опишите установку: клонирование, зависимости, переменные окружения -->
+Нужен только [mise](https://mise.jdx.dev/getting-started.html), остальное он поставит сам.
 
 ```bash
 git clone https://github.com/kolesbars/ai-for-developers-project-386.git
 cd ai-for-developers-project-386
+mise trust
+mise install
+mise run install
 ```
 
 ## Использование
 
-<!-- Добавьте примеры запуска и запись asciinema — именно это смотрит работодатель -->
+```bash
+mise run dev
+```
+
+Backend — http://localhost:8080 (`GET /api/health`), frontend — http://localhost:5173
+(запросы `/api` проксируются на backend).
+
+| Команда | Что делает |
+|---|---|
+| `mise run check` | все проверки: контракт, линтеры, тесты, сборка (то же, что в CI) |
+| `mise run lint` | ktlint + ESLint + проверка типов |
+| `mise run test` | JUnit + Vitest |
+| `mise run format` | автоисправление стиля |
+| `mise run build` | fat jar backend и статика frontend |
+| `mise run api:sdk` | TypeSpec → OpenAPI → `frontend/src/api/schema.d.ts` |
+| `mise tasks` | список всех задач |
+
+После изменения `api/*.tsp` запустите `mise run api:sdk` и закоммитьте сгенерированные
+файлы — CI проверяет, что они актуальны.
+
+## Коммиты
+
+[Conventional Commits](https://www.conventionalcommits.org/ru/): `feat`, `fix`, `docs`, `chore`,
+`ci`, `test`, `refactor`, `!` для breaking changes; необязательная область — `api`, `backend`,
+`frontend`, `e2e`. Например: `feat(frontend): страница записи`.
 
 ---
 
