@@ -1,0 +1,35 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Ставит mise и инструменты из mise.toml (JDK, Node) с кэшем.
+      - uses: jdx/mise-action@v5
+        with:
+          install: true
+          cache: true
+
+      # Кэш Gradle (wrapper, зависимости, build cache).
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Install dependencies
+        run: mise run install
+
+      - name: Check (contract, lint, tests, build)
+        run: mise run check
+
+      - name: Generated API files are committed
+        run: mise run api:verify
