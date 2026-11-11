@@ -12,7 +12,6 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import java.time.Clock
-import java.time.Duration
 
 fun Route.bookingRoutes(
     meetingTypes: MeetingTypeRepository,
@@ -27,11 +26,12 @@ fun Route.bookingRoutes(
 
         post {
             val draft = call.receive<CreateBookingRequest>().validate()
-            val meetingType = meetingTypes.find(draft.meetingTypeId) ?: throw ApiException.meetingTypeNotFound()
-            val duration = Duration.ofMinutes(meetingType.durationMinutes.toLong())
+            val meetingType = meetingTypes.require(draft.meetingTypeId)
+            val duration = meetingType.duration
             val now = clock.instant()
             if (!bookingWindow.isStart(draft.startAt, now, duration)) throw ApiException.slotUnavailable()
-            val booking = bookings.insert(draft, draft.startAt.plus(duration), meetingType.name, now)
+            val booking =
+                bookings.insert(draft, draft.startAt.plus(duration), meetingType.name, now) ?: throw ApiException.slotTaken()
             call.respond(HttpStatusCode.Created, booking)
         }
 

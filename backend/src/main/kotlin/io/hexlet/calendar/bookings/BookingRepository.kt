@@ -2,7 +2,6 @@ package io.hexlet.calendar.bookings
 
 import io.hexlet.calendar.db.EXCLUSION_VIOLATION
 import io.hexlet.calendar.db.query
-import io.hexlet.calendar.routes.ApiException
 import java.sql.ResultSet
 import java.sql.SQLException
 import java.sql.Timestamp
@@ -52,40 +51,43 @@ class BookingRepository(
     /**
      * Непересечение гарантирует БД (exclusion constraint `bookings_no_overlap`), в том числе при
      * одновременных запросах.
-     * @throws ApiException `slot_taken`, если интервал пересекается с любым Бронированием.
+     * @return `null`, если интервал пересекается с любым Бронированием (роут отвечает `409 slot_taken`).
      */
     suspend fun insert(
         draft: BookingDraft,
         endAt: Instant,
         meetingTypeName: String,
         now: Instant,
-    ): Booking {
+    ): Booking? {
         val id = UUID.randomUUID()
         // PostgreSQL хранит микросекунды — ответ POST совпадает с последующим GET.
         val createdAt = now.truncatedTo(ChronoUnit.MICROS)
-        dataSource.query { connection ->
-            connection
-                .prepareStatement(
-                    """
-                    INSERT INTO bookings (id, meeting_type_id, start_at, end_at, guest_name, guest_email, comment, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    """.trimIndent(),
-                ).use { statement ->
-                    statement.setObject(1, id)
-                    statement.setString(2, draft.meetingTypeId)
-                    statement.setTimestamp(3, Timestamp.from(draft.startAt))
-                    statement.setTimestamp(4, Timestamp.from(endAt))
-                    statement.setString(5, draft.guestName)
-                    statement.setString(6, draft.guestEmail)
-                    statement.setString(7, draft.comment)
-                    statement.setTimestamp(8, Timestamp.from(createdAt))
-                    try {
-                        statement.executeUpdate()
-                    } catch (e: SQLException) {
-                        if (e.sqlState == EXCLUSION_VIOLATION) throw ApiException.slotTaken() else throw e
+        val inserted =
+            dataSource.query { connection ->
+                connection
+                    .prepareStatement(
+                        """
+                        INSERT INTO bookings (id, meeting_type_id, start_at, end_at, guest_name, guest_email, comment, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """.trimIndent(),
+                    ).use { statement ->
+                        statement.setObject(1, id)
+                        statement.setString(2, draft.meetingTypeId)
+                        statement.setTimestamp(3, Timestamp.from(draft.startAt))
+                        statement.setTimestamp(4, Timestamp.from(endAt))
+                        statement.setString(5, draft.guestName)
+                        statement.setString(6, draft.guestEmail)
+                        statement.setString(7, draft.comment)
+                        statement.setTimestamp(8, Timestamp.from(createdAt))
+                        try {
+                            statement.executeUpdate()
+                            true
+                        } catch (e: SQLException) {
+                            if (e.sqlState == EXCLUSION_VIOLATION) false else throw e
+                        }
                     }
-                }
-        }
+            }
+        if (!inserted) return null
         return Booking(
             id = id.toString(),
             meetingTypeId = draft.meetingTypeId,
