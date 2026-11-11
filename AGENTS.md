@@ -53,6 +53,8 @@ npm run test --workspace frontend -- src/App.test.tsx -t 'не найден'
 
 - Conventional Commits (`feat`, `fix`, `docs`, `chore`, `ci`, `test`, `refactor`, `!` для breaking)
   с необязательной областью (`api`, `backend`, `frontend`, `e2e`): `feat(frontend): страница записи`.
+- Коммит реализации ссылается на тикет, который закрывает, — номер issue в скобках в конце
+  заголовка: `feat: запись на свободный слот (#12)`. GitHub превращает номер в ссылку.
 - commitlint нет — соблюдать вручную. CI (`.github/workflows/ci.yml`) идёт на каждый push.
 
 ## Запреты
