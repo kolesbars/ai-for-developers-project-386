@@ -73,6 +73,30 @@ PostgreSQL во временном каталоге — данные живут 
 После изменения `api/*.tsp` запустите `mise run api:sdk` и закоммитьте сгенерированные
 файлы — CI проверяет, что они актуальны.
 
+## Запуск в контейнере
+
+Нужны Docker и Docker Compose (для разработки они не обязательны — хватает mise).
+
+```bash
+docker compose up --build
+```
+
+Приложение — http://localhost:8080: один контейнер, где Ktor отдаёт API под `/api` и собранный
+frontend (остальные пути — `index.html`, чтобы работал клиентский роутинг), плюс отдельный
+PostgreSQL 17 с томом `db-data`. Многоэтапный `Dockerfile` собирает frontend (Node) и fat jar
+(JDK 21), в итоговом образе — только JRE, `app.jar` и статика.
+
+| Переменная | Значение |
+|---|---|
+| `DATABASE_URL` | задана в `docker-compose.yml` (сервис `db`) |
+| `BACKEND_PORT` | порт внутри контейнера, `8080` |
+| `STATIC_DIR` | каталог со статикой frontend, в образе `/app/public` |
+| `OWNER_NAME`, `OWNER_BIO`, `OWNER_TIME_ZONE` | профиль Владельца; берутся из окружения или `.env` |
+| `APP_PORT` | порт на хосте, по умолчанию `8080` |
+
+Остановить и удалить данные: `docker compose down --volumes`. CI (job `docker`) собирает образ,
+поднимает compose и проверяет, что `GET /api/health` отвечает `200`.
+
 ## Коммиты
 
 [Conventional Commits](https://www.conventionalcommits.org/ru/): `feat`, `fix`, `docs`, `chore`,

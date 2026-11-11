@@ -44,3 +44,34 @@ jobs:
 
       - name: Generated API files are committed
         run: mise run api:verify
+
+  # Образ из Dockerfile + PostgreSQL из docker-compose.yml: контейнер поднимается и отвечает.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build image and start compose
+        run: docker compose up --build --detach --wait db app
+
+      - name: GET /api/health → 200, / → index.html
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/api/health; then
+              echo
+              curl -fsS http://localhost:8080/ | grep -q '<div id="root">'
+              curl -fsS http://localhost:8080/admin | grep -q '<div id="root">'
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "backend не ответил за 120 с"
+          exit 1
+
+      - name: Container logs
+        if: always()
+        run: docker compose logs
+
+      - name: Stop compose
+        if: always()
+        run: docker compose down --volumes

@@ -2,6 +2,7 @@ package io.hexlet.calendar
 
 import io.hexlet.calendar.db.Database
 import io.hexlet.calendar.meetingtypes.MeetingTypeRepository
+import io.hexlet.calendar.routes.frontendRoutes
 import io.hexlet.calendar.routes.healthRoutes
 import io.hexlet.calendar.routes.installErrorHandling
 import io.hexlet.calendar.routes.meetingTypeRoutes
@@ -14,6 +15,7 @@ import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.routing.routing
 import kotlinx.serialization.json.Json
+import java.io.File
 import java.time.Clock
 import javax.sql.DataSource
 
@@ -28,10 +30,12 @@ fun main() {
 /**
  * @param dataSource PostgreSQL; по умолчанию — `DATABASE_URL` или embedded.
  * @param clock источник «сейчас»; тесты передают `Clock.fixed(...)`.
+ * @param staticDir собранный frontend (`STATIC_DIR`, задан в Docker-образе); без него отдаётся только API.
  */
 fun Application.module(
     dataSource: DataSource = Database.fromEnvironment(),
     clock: Clock = Clock.systemUTC(),
+    staticDir: File? = System.getenv("STATIC_DIR")?.let(::File),
 ) {
     Database.migrate(dataSource)
 
@@ -49,5 +53,7 @@ fun Application.module(
     routing {
         healthRoutes()
         meetingTypeRoutes(MeetingTypeRepository(dataSource), clock)
+        // Последним: SPA-fallback не должен перехватывать маршруты API.
+        staticDir?.let { frontendRoutes(it) }
     }
 }
