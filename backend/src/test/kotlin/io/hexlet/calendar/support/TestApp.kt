@@ -2,6 +2,7 @@ package io.hexlet.calendar.support
 
 import io.hexlet.calendar.db.Database
 import io.hexlet.calendar.module
+import io.hexlet.calendar.owner.Owner
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.request.post
@@ -59,10 +60,11 @@ fun fixedClock(now: Instant = DEFAULT_NOW): Clock = Clock.fixed(now, ZoneOffset.
  */
 fun apiTest(
     clock: Clock = fixedClock(),
+    owner: Owner = Owner.fromEnvironment { null },
     block: suspend ApplicationTestBuilder.() -> Unit,
 ) = testApplication {
     TestDatabase.reset()
-    application { module(dataSource = TestDatabase.dataSource, clock = clock) }
+    application { module(dataSource = TestDatabase.dataSource, clock = clock, owner = owner) }
     block()
 }
 

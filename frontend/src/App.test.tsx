@@ -63,6 +63,31 @@ describe('главная страница', () => {
   })
 })
 
+const owner = { name: 'Анна Смирнова', bio: 'Консультации по Kotlin', timeZone: 'Asia/Almaty' }
+
+describe('блок Владельца на главной', () => {
+  it('показывает Владельца из API: инициалы, имя и описание', async () => {
+    mockApi({ 'GET /api/owner': { body: owner }, 'GET /api/meeting-types': { body: [] } })
+    renderAt('/')
+
+    const section = within(await screen.findByRole('region', { name: 'Владелец' }))
+    expect(await section.findByRole('heading', { level: 2, name: 'Анна Смирнова' })).toBeInTheDocument()
+    expect(section.getByText('Консультации по Kotlin')).toBeInTheDocument()
+    expect(section.getByText('АС')).toBeInTheDocument()
+  })
+
+  it('без профиля Владельца каталог всё равно показывается', async () => {
+    mockApi({
+      'GET /api/owner': { status: 500, body: { code: 'oops', message: 'oops' } },
+      'GET /api/meeting-types': { body: [intro] },
+    })
+    renderAt('/')
+
+    expect(await screen.findAllByRole('article')).toHaveLength(1)
+    expect(screen.queryByRole('region', { name: 'Владелец' })).not.toBeInTheDocument()
+  })
+})
+
 describe('страница записи (заглушка)', () => {
   it('показывает Тип встречи из API', async () => {
     mockApi({ 'GET /api/meeting-types/consultation': { body: consultation } })

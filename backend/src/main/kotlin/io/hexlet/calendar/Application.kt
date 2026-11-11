@@ -2,9 +2,11 @@ package io.hexlet.calendar
 
 import io.hexlet.calendar.db.Database
 import io.hexlet.calendar.meetingtypes.MeetingTypeRepository
+import io.hexlet.calendar.owner.Owner
 import io.hexlet.calendar.routes.healthRoutes
 import io.hexlet.calendar.routes.installErrorHandling
 import io.hexlet.calendar.routes.meetingTypeRoutes
+import io.hexlet.calendar.routes.ownerRoutes
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -28,10 +30,12 @@ fun main() {
 /**
  * @param dataSource PostgreSQL; по умолчанию — `DATABASE_URL` или embedded.
  * @param clock источник «сейчас»; тесты передают `Clock.fixed(...)`.
+ * @param owner профиль Владельца; по умолчанию — из `OWNER_*` переменных окружения.
  */
 fun Application.module(
     dataSource: DataSource = Database.fromEnvironment(),
     clock: Clock = Clock.systemUTC(),
+    owner: Owner = Owner.fromEnvironment(),
 ) {
     Database.migrate(dataSource)
 
@@ -48,6 +52,7 @@ fun Application.module(
 
     routing {
         healthRoutes()
+        ownerRoutes(owner)
         meetingTypeRoutes(MeetingTypeRepository(dataSource), clock)
     }
 }

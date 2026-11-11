@@ -1,25 +1,45 @@
-import { Alert, Button, Card, Container, Loader, SimpleGrid, Stack, Text, Title } from '@mantine/core'
+import {
+  Alert,
+  Avatar,
+  Button,
+  Card,
+  Container,
+  Group,
+  Loader,
+  SimpleGrid,
+  Stack,
+  Text,
+  Title,
+} from '@mantine/core'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { api, type components } from '../api/client'
-import { formatDuration } from '../format'
+import { formatDuration, initials } from '../format'
 import { bookingPath } from '../routes'
 
 type MeetingType = components['schemas']['MeetingType']
+type Owner = components['schemas']['Owner']
 
 type Catalog =
   | { state: 'loading' }
   | { state: 'error' }
   | { state: 'ready'; meetingTypes: MeetingType[] }
 
-// Временный профиль до GET /api/owner (тикет #15).
-const owner = {
-  name: 'Владелец календаря',
-  bio: 'Выберите удобное время для встречи',
-}
-
 export function HomePage() {
   const [catalog, setCatalog] = useState<Catalog>({ state: 'loading' })
+  // Профиль — украшение каталога: при ошибке блок просто не показывается.
+  const [owner, setOwner] = useState<Owner | null>(null)
+
+  useEffect(() => {
+    let active = true
+    api.GET('/api/owner').then(
+      ({ data }) => active && data && setOwner(data),
+      () => {},
+    )
+    return () => {
+      active = false
+    }
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -46,10 +66,17 @@ export function HomePage() {
           </Text>
         </Stack>
 
-        <Stack gap={4} component="section" aria-label="Владелец">
-          <Title order={2}>{owner.name}</Title>
-          <Text c="dimmed">{owner.bio}</Text>
-        </Stack>
+        {owner && (
+          <Group gap="md" wrap="nowrap" component="section" aria-label="Владелец">
+            <Avatar size="lg" radius="xl" color="violet" aria-hidden>
+              {initials(owner.name)}
+            </Avatar>
+            <Stack gap={4}>
+              <Title order={2}>{owner.name}</Title>
+              {owner.bio && <Text c="dimmed">{owner.bio}</Text>}
+            </Stack>
+          </Group>
+        )}
 
         <section aria-label="Типы встреч">
           {catalog.state === 'loading' && <Loader aria-label="Загрузка" />}
