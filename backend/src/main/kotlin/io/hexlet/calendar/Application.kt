@@ -1,5 +1,6 @@
 package io.hexlet.calendar
 
+import io.hexlet.calendar.bookings.BookingRepository
 import io.hexlet.calendar.db.Database
 import io.hexlet.calendar.meetingtypes.MeetingTypeRepository
 import io.hexlet.calendar.owner.Owner
@@ -8,6 +9,7 @@ import io.hexlet.calendar.routes.healthRoutes
 import io.hexlet.calendar.routes.installErrorHandling
 import io.hexlet.calendar.routes.meetingTypeRoutes
 import io.hexlet.calendar.routes.ownerRoutes
+import io.hexlet.calendar.slots.BookingWindow
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -19,6 +21,7 @@ import io.ktor.server.routing.routing
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.time.Clock
+import java.time.ZoneId
 import javax.sql.DataSource
 
 private const val DEFAULT_PORT = 8080
@@ -57,7 +60,12 @@ fun Application.module(
     routing {
         healthRoutes()
         ownerRoutes(owner)
-        meetingTypeRoutes(MeetingTypeRepository(dataSource), clock)
+        meetingTypeRoutes(
+            MeetingTypeRepository(dataSource),
+            BookingRepository(dataSource),
+            BookingWindow(ZoneId.of(owner.timeZone)),
+            clock,
+        )
         // Последним: SPA-fallback не должен перехватывать маршруты API.
         staticDir?.let { frontendRoutes(it) }
     }

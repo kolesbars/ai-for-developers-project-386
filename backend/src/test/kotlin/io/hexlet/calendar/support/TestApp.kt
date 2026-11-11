@@ -15,6 +15,7 @@ import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import java.sql.Timestamp
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -66,6 +67,32 @@ fun apiTest(
     TestDatabase.reset()
     application { module(dataSource = TestDatabase.dataSource, clock = clock, owner = owner, staticDir = null) }
     block()
+}
+
+/**
+ * Вставляет Бронирование напрямую в БД — подготовка данных, пока нет `POST /api/bookings` (#18);
+ * после него тесты Слотов лучше бронировать через API.
+ */
+fun insertBooking(
+    meetingTypeId: String,
+    startAt: Instant,
+    endAt: Instant,
+) {
+    TestDatabase.dataSource.connection.use { connection ->
+        connection
+            .prepareStatement(
+                """
+                INSERT INTO bookings (id, meeting_type_id, start_at, end_at, guest_name, guest_email, created_at)
+                VALUES (gen_random_uuid(), ?, ?, ?, 'Гость', 'guest@example.com', ?)
+                """.trimIndent(),
+            ).use { statement ->
+                statement.setString(1, meetingTypeId)
+                statement.setTimestamp(2, Timestamp.from(startAt))
+                statement.setTimestamp(3, Timestamp.from(endAt))
+                statement.setTimestamp(4, Timestamp.from(DEFAULT_NOW))
+                statement.executeUpdate()
+            }
+    }
 }
 
 suspend fun HttpClient.postJson(
