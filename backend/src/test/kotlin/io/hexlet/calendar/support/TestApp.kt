@@ -64,7 +64,7 @@ fun apiTest(
     block: suspend ApplicationTestBuilder.() -> Unit,
 ) = testApplication {
     TestDatabase.reset()
-    application { module(dataSource = TestDatabase.dataSource, clock = clock, owner = owner) }
+    application { module(dataSource = TestDatabase.dataSource, clock = clock, owner = owner, staticDir = null) }
     block()
 }
 
