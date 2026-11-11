@@ -1,18 +1,11 @@
 import { Anchor, Badge, Group, Paper, Stack, Text, Title } from '@mantine/core'
 import type { components } from '../../api/client'
-import { dayKey, formatDay, formatRange } from '../booking/schedule'
+import { dayKey, formatDay, formatRange, groupByDay } from '../booking/schedule'
 
 export type Booking = components['schemas']['Booking']
 
 /** Встречи по дням браузера (spec §6); порядок — как пришёл с сервера (по возрастанию `startAt`). */
-const byDay = (bookings: Booking[]) => {
-  const days = new Map<string, Booking[]>()
-  for (const booking of bookings) {
-    const key = dayKey(booking.startAt)
-    days.set(key, [...(days.get(key) ?? []), booking])
-  }
-  return [...days.values()]
-}
+const byDay = (bookings: Booking[]) => [...groupByDay(bookings).values()]
 
 /** Раздел «Предстоящие встречи»: лента по дням или пустое состояние (spec §7). */
 export function UpcomingMeetings({ bookings }: { bookings: Booking[] }) {

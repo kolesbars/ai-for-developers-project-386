@@ -155,9 +155,39 @@ describe('страница записи: занятое время и недос
     expect(days.getByRole('button', { name: 'суббота, 14 ноября' })).toBeDisabled()
     expect(days.getByRole('button', { name: 'воскресенье, 15 ноября' })).toBeDisabled()
     expect(days.getByRole('button', { name: 'понедельник, 16 ноября' })).toBeEnabled()
-    // Окно — 14 дней с сегодняшнего: с 12 по 25 ноября.
-    expect(days.getAllByRole('button')).toHaveLength(14)
-    expect(days.getByRole('button', { name: 'среда, 25 ноября' })).toBeDisabled()
+    // Окно — с сегодняшнего до последнего дня со Слотами: остальные дни месяца — не кнопки.
+    expect(days.getAllByRole('button')).toHaveLength(5)
+    expect(days.queryByRole('button', { name: 'среда, 11 ноября' })).not.toBeInTheDocument()
+    expect(days.queryByRole('button', { name: 'вторник, 17 ноября' })).not.toBeInTheDocument()
+  })
+
+  it('сетка месяца пн–вс с заголовком месяца; Окно на стыке месяцев — две сетки', async () => {
+    openBookingPage([
+      slot('2026-11-30T04:00:00Z'), // пн 30 ноября
+      slot('2026-12-01T04:00:00Z'), // вт 1 декабря
+    ])
+
+    const days = await calendar()
+    const november = within(days.getByRole('grid', { name: 'ноябрь 2026' }))
+    const december = within(days.getByRole('grid', { name: 'декабрь 2026' }))
+    expect(november.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
+      'Пн',
+      'Вт',
+      'Ср',
+      'Чт',
+      'Пт',
+      'Сб',
+      'Вс',
+    ])
+    // Ноябрь 2026 начинается в воскресенье: 1-е — последняя клетка первой недели.
+    const firstWeek = november.getAllByRole('row')[1]
+    expect(within(firstWeek).getAllByRole('gridcell').at(-1)).toHaveTextContent('1')
+    expect(november.getByRole('button', { name: 'понедельник, 30 ноября' })).toBeEnabled()
+    expect(december.getByRole('button', { name: 'вторник, 1 декабря' })).toBeEnabled()
+    // Декабрь 2026 начинается во вторник: понедельник — пустая клетка, 31-е — в сетке, но не кнопка.
+    expect(within(december.getAllByRole('row')[1]).getAllByRole('gridcell')[0]).toHaveTextContent('')
+    expect(december.getByText('31')).toBeInTheDocument()
+    expect(december.queryByRole('button', { name: 'четверг, 31 декабря' })).not.toBeInTheDocument()
   })
 
   it('без свободного времени в Окне сообщает об этом', async () => {
