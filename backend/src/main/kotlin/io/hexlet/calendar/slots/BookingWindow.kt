@@ -6,9 +6,6 @@ import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
 
-/** Часовой пояс Владельца по умолчанию (спецификация §3). */
-val OWNER_TIME_ZONE: ZoneId = ZoneId.of("Asia/Almaty")
-
 private const val WINDOW_DAYS = 14L
 private val WORK_START: LocalTime = LocalTime.of(9, 0)
 private val WORK_END: LocalTime = LocalTime.of(18, 0)
@@ -21,7 +18,8 @@ private val WEEKEND = setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
  * Единственный источник правил расписания: и для списка Слотов, и для проверки `startAt` Бронирования.
  */
 class BookingWindow(
-    private val zone: ZoneId = OWNER_TIME_ZONE,
+    /** Часовой пояс Владельца (`Owner.timeZone`, `Asia/Almaty`). */
+    private val zone: ZoneId,
 ) {
     fun starts(
         now: Instant,

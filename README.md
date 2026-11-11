@@ -58,6 +58,8 @@ Backend — http://localhost:8080 (`GET /api/health`), frontend — http://local
 (запросы `/api` проксируются на backend). Без `DATABASE_URL` backend поднимает embedded
 PostgreSQL во временном каталоге — данные живут до остановки backend. Внешняя БД:
 `DATABASE_URL=postgres://user:pass@host:5432/db` (или `jdbc:postgresql://…`).
+Профиль Владельца (`GET /api/owner`) — из `OWNER_NAME`, `OWNER_BIO` и `OWNER_TIME_ZONE`
+(по умолчанию `Asia/Almaty`); незаданные берутся по умолчанию.
 
 | Команда | Что делает |
 |---|---|
