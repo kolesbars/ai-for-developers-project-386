@@ -11,9 +11,9 @@ import {
   Text,
   Title,
 } from '@mantine/core'
-import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { api, type components } from '../api/client'
+import { useLoad, useOwner } from '../api/useLoad'
 import { timeZoneNote } from '../format'
 import { bookingPath, homePath } from '../routes'
 import { icsHref } from './booking/ics'
@@ -22,44 +22,12 @@ import { formatDay, formatRange } from './booking/schedule'
 type Booking = components['schemas']['Booking']
 type Owner = components['schemas']['Owner']
 
-type Page =
-  | { state: 'loading' }
-  | { state: 'not-found' }
-  | { state: 'error' }
-  | { state: 'ready'; booking: Booking }
-
 /** Подтверждение `/booking/{bookingId}`: всё берётся с сервера, поэтому переживает перезагрузку. */
 export function ConfirmationPage() {
   const { bookingId = '' } = useParams()
-  const [page, setPage] = useState<Page>({ state: 'loading' })
-  // Пояс Владельца для подсказки; без профиля — пояс по умолчанию.
-  const [owner, setOwner] = useState<Owner | null>(null)
-
-  useEffect(() => {
-    let active = true
-    api.GET('/api/owner').then(
-      ({ data }) => active && data && setOwner(data),
-      () => {},
-    )
-    return () => {
-      active = false
-    }
-  }, [])
-
-  useEffect(() => {
-    let active = true
-    api.GET('/api/bookings/{id}', { params: { path: { id: bookingId } } }).then(
-      ({ data, response }) => {
-        if (!active) return
-        if (data) setPage({ state: 'ready', booking: data })
-        else setPage({ state: response.status === 404 ? 'not-found' : 'error' })
-      },
-      () => active && setPage({ state: 'error' }),
-    )
-    return () => {
-      active = false
-    }
-  }, [bookingId])
+  const [page] = useLoad(() => api.GET('/api/bookings/{id}', { params: { path: { id: bookingId } } }), [bookingId])
+  // Пояс Владельца для подсказки; без профиля подсказка — без него.
+  const owner = useOwner()
 
   return (
     <Container size="sm" py="xl">
@@ -74,7 +42,7 @@ export function ConfirmationPage() {
             Не удалось загрузить бронирование. Обновите страницу.
           </Alert>
         )}
-        {page.state === 'ready' && <Confirmation booking={page.booking} owner={owner} />}
+        {page.state === 'ready' && <Confirmation booking={page.data} owner={owner} />}
       </Stack>
     </Container>
   )

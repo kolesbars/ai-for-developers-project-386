@@ -1,22 +1,14 @@
 import { Alert, Anchor, Box, Container, Loader, Paper, SimpleGrid, Stack, Title } from '@mantine/core'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { api, type components } from '../api/client'
+import { api } from '../api/client'
+import { useLoad, useOwner } from '../api/useLoad'
 import { confirmationPath, homePath } from '../routes'
 import { BookingForm } from './booking/BookingForm'
 import { BookingSummary } from './booking/BookingSummary'
 import { emptyGuest, type GuestErrors, type GuestValues, validateGuest } from './booking/guest'
 import { dayKey, type Slot } from './booking/schedule'
 import { SlotPicker } from './booking/SlotPicker'
-
-type MeetingType = components['schemas']['MeetingType']
-type Owner = components['schemas']['Owner']
-
-type Page =
-  | { state: 'loading' }
-  | { state: 'not-found' }
-  | { state: 'error' }
-  | { state: 'ready'; meetingType: MeetingType }
 
 const SUBMIT_FAILED = 'Не удалось записаться. Попробуйте ещё раз.'
 
@@ -30,9 +22,9 @@ type Schedule = { state: 'loading' } | { state: 'error' } | { state: 'ready'; sl
 
 export function BookingPage() {
   const { id = '' } = useParams()
-  const [page, setPage] = useState<Page>({ state: 'loading' })
+  const [page] = useLoad(() => api.GET('/api/meeting-types/{id}', { params: { path: { id } } }), [id])
   // Профиль Владельца — украшение сводки: без него страница всё равно работает.
-  const [owner, setOwner] = useState<Owner | null>(null)
+  const owner = useOwner()
   const [schedule, setSchedule] = useState<Schedule>({ state: 'loading' })
   const [selected, setSelected] = useState<Slot>()
   // Выбор времени или форма «Ваши данные»; данные формы живут здесь и переживают смену шага.
@@ -45,32 +37,6 @@ export function BookingPage() {
   const [day, setDay] = useState<string>()
   const [notice, setNotice] = useState<string>()
   const navigate = useNavigate()
-
-  useEffect(() => {
-    let active = true
-    api.GET('/api/owner').then(
-      ({ data }) => active && data && setOwner(data),
-      () => {},
-    )
-    return () => {
-      active = false
-    }
-  }, [])
-
-  useEffect(() => {
-    let active = true
-    api.GET('/api/meeting-types/{id}', { params: { path: { id } } }).then(
-      ({ data, response }) => {
-        if (!active) return
-        if (data) setPage({ state: 'ready', meetingType: data })
-        else setPage({ state: response.status === 404 ? 'not-found' : 'error' })
-      },
-      () => active && setPage({ state: 'error' }),
-    )
-    return () => {
-      active = false
-    }
-  }, [id])
 
   /** Загружает актуальное расписание; #19 вызывает её же после конфликта при записи. */
   const loadSlots = useCallback(
@@ -150,7 +116,7 @@ export function BookingPage() {
         {page.state === 'ready' && (
           <Paper withBorder radius="lg">
             <SimpleGrid cols={{ base: 1, md: step === 'details' ? 2 : 3 }} spacing={0}>
-              <BookingSummary meetingType={page.meetingType} owner={owner} selected={selected} />
+              <BookingSummary meetingType={page.data} owner={owner} selected={selected} />
               {step === 'pick' && schedule.state === 'loading' && (
                 <Box p="lg">
                   <Loader aria-label="Загрузка расписания" />
