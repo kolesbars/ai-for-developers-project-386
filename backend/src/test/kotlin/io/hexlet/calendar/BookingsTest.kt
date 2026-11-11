@@ -1,5 +1,7 @@
 package io.hexlet.calendar
 
+import io.hexlet.calendar.support.DEFAULT_NOW
+import io.hexlet.calendar.support.MutableClock
 import io.hexlet.calendar.support.apiTest
 import io.hexlet.calendar.support.fixedClock
 import io.hexlet.calendar.support.getJson
@@ -100,6 +102,40 @@ class BookingsTest {
             assertEquals(HttpStatusCode.OK, response.status)
             assertEquals(created, response.json())
         }
+
+    private suspend fun ApplicationTestBuilder.upcomingStarts(): List<String> {
+        val response = client.getJson("/api/bookings")
+        assertEquals(HttpStatusCode.OK, response.status)
+        return response.json().jsonArray.map { it.jsonObject.str("startAt") }
+    }
+
+    @Test
+    fun `список — ещё не закончившиеся Бронирования всех Типов по возрастанию startAt`() {
+        val clock = MutableClock(DEFAULT_NOW) // чт 08:00
+        apiTest(clock = clock) {
+            meetingType("hour", "Час", 60)
+            meetingType("half", "Полчаса", 30)
+            assertEquals(emptyList(), upcomingStarts())
+            book("half", "2026-11-13T04:00:00Z") // пт 09:00–09:30
+            book("hour", "2026-11-12T05:00:00Z") // чт 10:00–11:00
+            book("hour", "2026-11-12T04:00:00Z") // чт 09:00–10:00
+            book("half", "2026-11-12T07:00:00Z") // чт 12:00–12:30
+
+            clock.now = Instant.parse("2026-11-12T05:30:00Z") // чт 10:30: 09:00–10:00 закончилась, 10:00–11:00 идёт
+            assertEquals(
+                listOf("2026-11-12T05:00:00Z", "2026-11-12T07:00:00Z", "2026-11-13T04:00:00Z"),
+                upcomingStarts(),
+            )
+
+            clock.now = Instant.parse("2026-11-12T06:00:00Z") // чт 11:00 — ровно конец 10:00–11:00
+            assertEquals(listOf("2026-11-12T07:00:00Z", "2026-11-13T04:00:00Z"), upcomingStarts())
+
+            val list = client.getJson("/api/bookings").json().jsonArray
+            val booking = list.first().jsonObject
+            assertEquals("Полчаса", booking.str("meetingTypeName"))
+            assertEquals("maria@example.com", booking.str("guestEmail"))
+        }
+    }
 
     @Test
     fun `GET неизвестного Бронирования — 404 booking_not_found`() =

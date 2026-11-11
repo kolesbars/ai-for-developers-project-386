@@ -56,6 +56,7 @@ const dayFormat = new Intl.DateTimeFormat('ru-RU', { weekday: 'long', day: 'nume
 
 export const formatTime = (iso: string) => timeFormat.format(new Date(iso))
 /** «10:00–11:00» в поясе браузера. */
-export const formatRange = (slot: Slot) => `${formatTime(slot.startAt)}–${formatTime(slot.endAt)}`
+export const formatRange = (interval: Pick<Slot, 'startAt' | 'endAt'>) =>
+  `${formatTime(interval.startAt)}–${formatTime(interval.endAt)}`
 /** «пятница, 13 ноября». */
 export const formatDay = (date: Date) => dayFormat.format(date)

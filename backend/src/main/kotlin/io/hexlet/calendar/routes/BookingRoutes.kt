@@ -21,6 +21,10 @@ fun Route.bookingRoutes(
     clock: Clock,
 ) {
     route("/api/bookings") {
+        get {
+            call.respond(bookings.upcoming(clock.instant()))
+        }
+
         post {
             val draft = call.receive<CreateBookingRequest>().validate()
             val meetingType = meetingTypes.find(draft.meetingTypeId) ?: throw ApiException.meetingTypeNotFound()

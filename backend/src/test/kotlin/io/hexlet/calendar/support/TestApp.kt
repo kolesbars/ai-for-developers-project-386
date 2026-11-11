@@ -17,6 +17,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import java.time.Clock
 import java.time.Instant
+import java.time.ZoneId
 import java.time.ZoneOffset
 import javax.sql.DataSource
 
@@ -53,6 +54,17 @@ object TestDatabase {
 val DEFAULT_NOW: Instant = Instant.parse("2026-11-12T03:00:00Z")
 
 fun fixedClock(now: Instant = DEFAULT_NOW): Clock = Clock.fixed(now, ZoneOffset.UTC)
+
+/** Часы, которые тест переводит вручную (`clock.now = ...`) — «время прошло» внутри одного теста. */
+class MutableClock(
+    @Volatile var now: Instant,
+) : Clock() {
+    override fun instant(): Instant = now
+
+    override fun getZone(): ZoneId = ZoneOffset.UTC
+
+    override fun withZone(zone: ZoneId): Clock = this
+}
 
 /**
  * Поднимает `Application.module()` на общей тестовой БД (очищенной) с зафиксированным временем.
