@@ -23,7 +23,7 @@ data class CreateMeetingTypeRequest(
         if (id == null || id.length !in 2..40 || !ID_PATTERN.matches(id)) {
             errors += FieldError("id", "2–40 символов: строчные латинские буквы и цифры, слова через дефис")
         }
-        if (name == null || name.length !in 1..100) {
+        if (name == null || name.isBlank() || name.length > 100) {
             errors += FieldError("name", "Название обязательно, до 100 символов")
         }
         if (description != null && description.length > 500) {

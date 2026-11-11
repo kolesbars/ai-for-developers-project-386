@@ -97,6 +97,7 @@ class MeetingTypesTest {
                     "id" to """{"id":"call--me","name":"Звонок","durationMinutes":30}""",
                     "name" to """{"id":"call","durationMinutes":30}""",
                     "name" to """{"id":"call","name":"","durationMinutes":30}""",
+                    "name" to """{"id":"call","name":"   ","durationMinutes":30}""",
                     "name" to """{"id":"call","name":"${"я".repeat(101)}","durationMinutes":30}""",
                     "description" to """{"id":"call","name":"Звонок","description":"${"я".repeat(501)}","durationMinutes":30}""",
                     "durationMinutes" to """{"id":"call","name":"Звонок"}""",
