@@ -40,6 +40,20 @@ describe('подтверждение', () => {
     expect(screen.getByText('Мария Смирнова · maria@example.com')).toBeInTheDocument()
   })
 
+  it('подсказка называет город любого пояса Владельца, а не только Алматы', async () => {
+    mockApi({
+      'GET /api/owner': { body: { ...owner, timeZone: 'Europe/Moscow' } },
+      [`GET /api/bookings/${booking.id}`]: { body: booking },
+    })
+    renderAt(`/booking/${booking.id}`)
+
+    expect(
+      await screen.findByText(
+        'Время показано в вашем часовом поясе (Europe/Moscow). Владелец работает по времени Москва, пн–пт 09:00–18:00.',
+      ),
+    ).toBeInTheDocument()
+  })
+
   it('«Записаться ещё» ведёт на страницу записи того же Типа встречи', async () => {
     openConfirmation()
 
