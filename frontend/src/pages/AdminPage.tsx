@@ -1,9 +1,10 @@
-import { Alert, Avatar, Badge, Box, Container, Flex, Group, Loader, NavLink, Stack, Text } from '@mantine/core'
+import { Alert, Avatar, Badge, Box, Button, Container, Flex, Group, Loader, Modal, NavLink, Stack, Text } from '@mantine/core'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { api, type components } from '../api/client'
 import { initials } from '../format'
 import { homePath } from '../routes'
+import { CreateMeetingTypeForm } from './admin/CreateMeetingTypeForm'
 import { type MeetingType, MeetingTypesSection } from './admin/MeetingTypesSection'
 import { type Booking, UpcomingMeetings } from './admin/UpcomingMeetings'
 
@@ -11,8 +12,11 @@ type Owner = components['schemas']['Owner']
 
 type Loadable<T> = { state: 'loading' } | { state: 'error' } | { state: 'ready'; data: T }
 
-/** Загружает данные раздела; `data` нет — ошибка (openapi-fetch не бросает на 4xx/5xx). */
-function useLoad<T>(load: () => Promise<{ data?: T }>): Loadable<T> {
+/**
+ * Загружает данные раздела; `data` нет — ошибка (openapi-fetch не бросает на 4xx/5xx).
+ * Второй элемент — правка загруженных данных (например, добавить созданный Тип встречи).
+ */
+function useLoad<T>(load: () => Promise<{ data?: T }>): [Loadable<T>, (update: (data: T) => T) => void] {
   const [value, setValue] = useState<Loadable<T>>({ state: 'loading' })
   useEffect(() => {
     let active = true
@@ -28,7 +32,9 @@ function useLoad<T>(load: () => Promise<{ data?: T }>): Loadable<T> {
     // Загрузка один раз при открытии страницы.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-  return value
+  const update = (change: (data: T) => T) =>
+    setValue((current) => (current.state === 'ready' ? { state: 'ready', data: change(current.data) } : current))
+  return [value, update]
 }
 
 const count = (value: Loadable<unknown[]>) =>
@@ -51,10 +57,11 @@ function Section<T>({ value, children }: { value: Loadable<T>; children: (data: 
 
 /** Админка Владельца `/admin` (spec §7): боковое меню и разделы. */
 export function AdminPage() {
-  const owner = useLoad<Owner>(() => api.GET('/api/owner'))
-  const bookings = useLoad<Booking[]>(() => api.GET('/api/bookings'))
-  const meetingTypes = useLoad<MeetingType[]>(() => api.GET('/api/meeting-types'))
+  const [owner] = useLoad<Owner>(() => api.GET('/api/owner'))
+  const [bookings] = useLoad<Booking[]>(() => api.GET('/api/bookings'))
+  const [meetingTypes, updateMeetingTypes] = useLoad<MeetingType[]>(() => api.GET('/api/meeting-types'))
   const [section, setSection] = useState<'meetings' | 'types'>('meetings')
+  const [creating, setCreating] = useState(false)
 
   return (
     <Container size="lg" py="xl">
@@ -95,11 +102,25 @@ export function AdminPage() {
           {section === 'meetings' ? (
             <Section value={bookings}>{(data) => <UpcomingMeetings bookings={data} />}</Section>
           ) : (
-            // #21: «+ Новый тип» с модальным окном — в `actions`, после создания перезагрузить список.
-            <Section value={meetingTypes}>{(data) => <MeetingTypesSection meetingTypes={data} />}</Section>
+            <Section value={meetingTypes}>
+              {(data) => (
+                <MeetingTypesSection
+                  meetingTypes={data}
+                  actions={<Button onClick={() => setCreating(true)}>+ Новый тип</Button>}
+                />
+              )}
+            </Section>
           )}
         </Box>
       </Flex>
+      <Modal opened={creating} onClose={() => setCreating(false)} title="Новый Тип встречи">
+        <CreateMeetingTypeForm
+          onCreated={(created) => {
+            updateMeetingTypes((types) => [...types, created])
+            setCreating(false)
+          }}
+        />
+      </Modal>
     </Container>
   )
 }

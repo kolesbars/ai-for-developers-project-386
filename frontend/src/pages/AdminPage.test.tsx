@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mockApi } from '../test/api'
 import { renderAt } from '../test/render'
@@ -125,5 +125,113 @@ describe('Админка — Типы встреч', () => {
     expect(second).toHaveTextContent('Знакомство')
     expect(second).toHaveTextContent('/book/intro')
     expect(screen.queryByText('Мария Иванова')).not.toBeInTheDocument()
+  })
+})
+
+describe('Админка — создание Типа встречи', () => {
+  const created = { id: 'razbor-koda', name: 'Разбор кода', description: 'Ревью PR', durationMinutes: 45 }
+
+  const openForm = async (createReply: { status?: number; body: unknown }) => {
+    const fetch = mockApi({
+      'GET /api/owner': { body: owner },
+      'GET /api/bookings': { body: [] },
+      'GET /api/meeting-types': { body: [consultation] },
+      'POST /api/meeting-types': createReply,
+    })
+    renderAt('/admin')
+    fireEvent.click(await screen.findByRole('button', { name: /^Типы встреч/ }))
+    fireEvent.click(await screen.findByRole('button', { name: '+ Новый тип' }))
+    return { fetch, dialog: await screen.findByRole('dialog', { name: 'Новый Тип встречи' }) }
+  }
+
+  const field = (dialog: HTMLElement, label: string | RegExp) => within(dialog).getByLabelText(label)
+  const type = (dialog: HTMLElement, label: string | RegExp, value: string) =>
+    fireEvent.change(field(dialog, label), { target: { value } })
+  const submit = (dialog: HTMLElement) =>
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Создать' }))
+
+  const sentBodies = async (fetch: ReturnType<typeof mockApi>) => {
+    const posts = fetch.mock.calls
+      .map(([input]) => input as Request)
+      .filter((request) => request.method === 'POST')
+    return Promise.all(posts.map((request) => request.clone().json()))
+  }
+
+  it('id подставляется из названия, подсказка показывает ссылку; после создания тип в списке', async () => {
+    const { fetch, dialog } = await openForm({ status: 201, body: created })
+
+    type(dialog, /Название/, 'Разбор кода')
+    expect(field(dialog, /^id/)).toHaveValue('razbor-koda')
+    expect(dialog).toHaveTextContent('Ссылка для Гостей: /book/razbor-koda — изменить потом нельзя')
+    type(dialog, /Длительность/, '45')
+    type(dialog, /Описание/, 'Ревью PR')
+    submit(dialog)
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(await sentBodies(fetch)).toEqual([created])
+    const cards = screen.getAllByRole('article')
+    expect(cards).toHaveLength(2)
+    expect(cards[1]).toHaveTextContent('Разбор кода')
+    expect(cards[1]).toHaveTextContent('/book/razbor-koda')
+    expect(screen.getByRole('button', { name: 'Типы встреч 2' })).toBeInTheDocument()
+  })
+
+  it('ошибки полей показываются до отправки, запрос не уходит', async () => {
+    const { fetch, dialog } = await openForm({ status: 201, body: created })
+
+    type(dialog, /Название/, 'Разбор кода')
+    type(dialog, /^id/, 'Razbor_koda')
+    type(dialog, /Длительность/, '50')
+    type(dialog, /Описание/, 'x'.repeat(501))
+    submit(dialog)
+
+    expect(
+      await within(dialog).findByText('2–40 символов: строчные латинские буквы и цифры, слова через дефис'),
+    ).toBeInTheDocument()
+    expect(within(dialog).getByText('Длительность — от 15 до 240 минут, кратно 15')).toBeInTheDocument()
+    expect(within(dialog).getByText('Описание — до 500 символов')).toBeInTheDocument()
+    expect(field(dialog, /^id/)).toBeInvalid()
+
+    type(dialog, /Название/, '   ')
+    submit(dialog)
+    expect(await within(dialog).findByText('Название обязательно, до 100 символов')).toBeInTheDocument()
+    expect(await sentBodies(fetch)).toEqual([])
+  })
+
+  it('id уже занят — ошибка под полем id, форма сохраняется', async () => {
+    const { dialog } = await openForm({
+      status: 409,
+      body: { code: 'meeting_type_exists', message: 'Тип встречи с таким id уже есть' },
+    })
+
+    type(dialog, /Название/, 'Консультация')
+    submit(dialog)
+
+    const idInput = field(dialog, /^id/)
+    expect(await within(dialog).findByText('Тип встречи с таким id уже есть')).toBeInTheDocument()
+    expect(idInput).toBeInvalid()
+    expect(idInput).toHaveAttribute(
+      'aria-describedby',
+      expect.stringContaining(within(dialog).getByText('Тип встречи с таким id уже есть').id),
+    )
+    expect(field(dialog, /Название/)).toHaveValue('Консультация')
+    expect(screen.getAllByRole('article')).toHaveLength(1)
+  })
+
+  it('ошибки backend validation_failed — под соответствующими полями', async () => {
+    const { dialog } = await openForm({
+      status: 400,
+      body: {
+        code: 'validation_failed',
+        message: 'Проверьте поля формы',
+        fieldErrors: [{ field: 'name', message: 'Название обязательно, до 100 символов' }],
+      },
+    })
+
+    type(dialog, /Название/, 'Консультация')
+    submit(dialog)
+
+    expect(await within(dialog).findByText('Название обязательно, до 100 символов')).toBeInTheDocument()
+    expect(field(dialog, /Название/)).toBeInvalid()
   })
 })
