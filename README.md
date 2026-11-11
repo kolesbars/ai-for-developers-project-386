@@ -16,7 +16,9 @@
 |---|---|
 | Контракт API | [TypeSpec](https://typespec.io) → OpenAPI 3.0.0 (`api/openapi/openapi.yaml`) |
 | Backend | Kotlin, Ktor, JDK 21, Gradle wrapper, JUnit 5, ktlint |
+| БД | PostgreSQL, миграции Flyway; без `DATABASE_URL` — embedded PostgreSQL (zonky) |
 | Frontend | TypeScript, React, Vite, Mantine, Vitest, ESLint |
+| API- и e2e-тесты | Playwright (`request` и установленный Google Chrome) |
 | SDK для frontend | генерируется из OpenAPI: `openapi-typescript` + `openapi-fetch` |
 | Инструменты и задачи | [mise](https://mise.jdx.dev) (`mise.toml`) |
 | CI | GitHub Actions → `mise run check` на каждый push |
@@ -30,6 +32,7 @@ npm-пакеты — в `package-lock.json`.
 api/        TypeSpec-контракт и сгенерированный openapi.yaml
 backend/    Ktor-приложение (Gradle)
 frontend/   Vite + React; src/api/schema.d.ts генерируется из OpenAPI
+e2e/        Playwright: tests/api — HTTP-запросы к backend, tests/e2e — браузер
 mise.toml   версии инструментов, переменные окружения и задачи
 ```
 
@@ -52,13 +55,16 @@ mise run dev
 ```
 
 Backend — http://localhost:8080 (`GET /api/health`), frontend — http://localhost:5173
-(запросы `/api` проксируются на backend).
+(запросы `/api` проксируются на backend). Без `DATABASE_URL` backend поднимает embedded
+PostgreSQL во временном каталоге — данные живут до остановки backend. Внешняя БД:
+`DATABASE_URL=postgres://user:pass@host:5432/db` (или `jdbc:postgresql://…`).
 
 | Команда | Что делает |
 |---|---|
 | `mise run check` | все проверки: контракт, линтеры, тесты, сборка (то же, что в CI) |
 | `mise run lint` | ktlint + ESLint + проверка типов |
-| `mise run test` | JUnit + Vitest |
+| `mise run test` | JUnit + Vitest + Playwright (API и e2e) |
+| `mise run test:api` / `test:e2e` | только API- или только браузерные тесты Playwright |
 | `mise run format` | автоисправление стиля |
 | `mise run build` | fat jar backend и статика frontend |
 | `mise run api:sdk` | TypeSpec → OpenAPI → `frontend/src/api/schema.d.ts` |

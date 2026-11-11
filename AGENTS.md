@@ -15,7 +15,11 @@ Contract-first: любое изменение API начинается с кон
 - **Frontend**: React/TypeScript/Vite/Mantine в `frontend/`, роутинг — `react-router`
   (пути в `src/routes.ts`). К backend — только через `api` из `src/api/client.ts`; Vite проксирует `/api`.
   Тесты (Vitest) рендерят внутри `MantineProvider` и `MemoryRouter`.
-- **npm workspaces**: корневой `package.json` объединяет `api` и `frontend`, один lockfile.
+- **БД**: PostgreSQL через JDBC (`db/`), миграции Flyway в `backend/src/main/resources/db/migration`;
+  без `DATABASE_URL` — embedded PostgreSQL. «Сейчас» — только из внедряемого `Clock` (`module(clock = …)`).
+- **E2E**: Playwright в `e2e/` — `tests/api` (HTTP к backend), `tests/e2e` (браузер); серверы поднимает
+  `playwright.config.ts` из собранных артефактов.
+- **npm workspaces**: корневой `package.json` объединяет `api`, `frontend` и `e2e`, один lockfile.
 - **Документация**: `README.md`, `GLOSSARY.md`, `docs/adr/`, `docs/agents/`.
 
 Подробности см. в `README.md` и `CLAUDE.md` (Claude-специфичные указания).
@@ -45,6 +49,7 @@ mise run lint | test | build | format
 ```bash
 cd backend && ./gradlew test --tests 'io.hexlet.calendar.HealthSmokeTest'
 npm run test --workspace frontend -- src/App.test.tsx -t 'не найден'
+npm run test --workspace e2e -- tests/api/meeting-types.spec.ts  # нужны собранные backend и frontend (mise run build)
 ```
 
 Перед завершением работы `mise run check` должен быть зелёным.

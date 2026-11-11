@@ -3,6 +3,7 @@
   "private": true,
   "workspaces": [
     "api",
-    "frontend"
+    "frontend",
+    "e2e"
   ]
 }

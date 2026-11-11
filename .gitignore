@@ -1,6 +1,8 @@
 node_modules/
 dist/
 tsp-output/
+test-results/
+playwright-report/
 
 # Gradle / Kotlin
 .gradle/

@@ -28,8 +28,19 @@ jobs:
       - name: Install dependencies
         run: mise run install
 
-      - name: Check (contract, lint, tests, build)
+      # Playwright использует предустановленный на ubuntu-latest Google Chrome (channel: 'chrome').
+      - name: Check (contract, lint, tests, build, API and e2e)
         run: mise run check
+
+      - name: Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          if-no-files-found: ignore
 
       - name: Generated API files are committed
         run: mise run api:verify
