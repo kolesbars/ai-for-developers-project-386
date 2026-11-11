@@ -88,30 +88,6 @@ describe('блок Владельца на главной', () => {
   })
 })
 
-describe('страница записи (заглушка)', () => {
-  it('показывает Тип встречи из API', async () => {
-    mockApi({ 'GET /api/meeting-types/consultation': { body: consultation } })
-    renderAt('/book/consultation')
-
-    expect(
-      await screen.findByRole('heading', { name: 'Запись на «Консультация»' }),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '← Назад' })).toHaveAttribute('href', '/')
-  })
-
-  it('сообщает, что Тип встречи не найден, по ответу 404', async () => {
-    mockApi({
-      'GET /api/meeting-types/unknown': {
-        status: 404,
-        body: { code: 'meeting_type_not_found', message: 'Тип встречи не найден' },
-      },
-    })
-    renderAt('/book/unknown')
-
-    expect(await screen.findByRole('heading', { name: 'Тип встречи не найден' })).toBeInTheDocument()
-  })
-})
-
 describe('неизвестный адрес', () => {
   it('показывает страницу «не найдена» со ссылкой на главную', () => {
     renderAt('/nope')

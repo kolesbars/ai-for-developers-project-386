@@ -14,5 +14,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // Пояс «браузера» в тестах фиксирован и отличается от пояса Владельца (Asia/Almaty, UTC+5),
+    // чтобы тесты ловили показ времени не в том поясе.
+    env: { TZ: 'Europe/Moscow' },
   },
 })
