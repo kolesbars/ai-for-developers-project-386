@@ -37,6 +37,13 @@ class ApiException(
 
         fun meetingTypeExists() = ApiException(HttpStatusCode.Conflict, ApiError("meeting_type_exists", "Тип встречи с таким id уже есть"))
 
+        fun slotTaken() = ApiException(HttpStatusCode.Conflict, ApiError("slot_taken", "Это время только что заняли. Выберите другое."))
+
+        fun slotUnavailable() =
+            ApiException(HttpStatusCode.UnprocessableEntity, ApiError("slot_unavailable", "Это время больше недоступно."))
+
+        fun bookingNotFound() = ApiException(HttpStatusCode.NotFound, ApiError("booking_not_found", "Бронирование не найдено"))
+
         fun meetingTypeNotFound() = ApiException(HttpStatusCode.NotFound, ApiError("meeting_type_not_found", "Тип встречи не найден"))
     }
 }

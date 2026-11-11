@@ -4,6 +4,7 @@ import io.hexlet.calendar.bookings.BookingRepository
 import io.hexlet.calendar.db.Database
 import io.hexlet.calendar.meetingtypes.MeetingTypeRepository
 import io.hexlet.calendar.owner.Owner
+import io.hexlet.calendar.routes.bookingRoutes
 import io.hexlet.calendar.routes.frontendRoutes
 import io.hexlet.calendar.routes.healthRoutes
 import io.hexlet.calendar.routes.installErrorHandling
@@ -60,12 +61,11 @@ fun Application.module(
     routing {
         healthRoutes()
         ownerRoutes(owner)
-        meetingTypeRoutes(
-            MeetingTypeRepository(dataSource),
-            BookingRepository(dataSource),
-            BookingWindow(ZoneId.of(owner.timeZone)),
-            clock,
-        )
+        val meetingTypes = MeetingTypeRepository(dataSource)
+        val bookings = BookingRepository(dataSource)
+        val bookingWindow = BookingWindow(ZoneId.of(owner.timeZone))
+        meetingTypeRoutes(meetingTypes, bookings, bookingWindow, clock)
+        bookingRoutes(meetingTypes, bookings, bookingWindow, clock)
         // Последним: SPA-fallback не должен перехватывать маршруты API.
         staticDir?.let { frontendRoutes(it) }
     }

@@ -3,7 +3,6 @@ package io.hexlet.calendar
 import io.hexlet.calendar.support.apiTest
 import io.hexlet.calendar.support.fixedClock
 import io.hexlet.calendar.support.getJson
-import io.hexlet.calendar.support.insertBooking
 import io.hexlet.calendar.support.json
 import io.hexlet.calendar.support.postJson
 import io.ktor.http.HttpStatusCode
@@ -123,7 +122,12 @@ class SlotsTest {
         apiTest {
             client.postJson("/api/meeting-types", """{"id":"other","name":"Другой","durationMinutes":60}""")
             // Бронирование 10:00–11:00 другого Типа встречи
-            insertBooking("other", Instant.parse("2026-11-12T05:00:00Z"), Instant.parse("2026-11-12T06:00:00Z"))
+            val booking =
+                client.postJson(
+                    "/api/bookings",
+                    """{"meetingTypeId":"other","startAt":"2026-11-12T05:00:00Z","guestName":"Гость","guestEmail":"guest@example.com"}""",
+                )
+            assertEquals(HttpStatusCode.Created, booking.status)
 
             val hour = slotsOf("hour", 60).associate { it.startAt() to it.getValue("status").jsonPrimitive.content }
             assertEquals("available", hour["2026-11-12T04:00:00Z"]) // 09:00–10:00 — встык
