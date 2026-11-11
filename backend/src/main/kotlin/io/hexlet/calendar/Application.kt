@@ -1,10 +1,12 @@
 package io.hexlet.calendar
 
+import io.hexlet.calendar.bookings.BookingRepository
 import io.hexlet.calendar.db.Database
 import io.hexlet.calendar.meetingtypes.MeetingTypeRepository
 import io.hexlet.calendar.routes.healthRoutes
 import io.hexlet.calendar.routes.installErrorHandling
 import io.hexlet.calendar.routes.meetingTypeRoutes
+import io.hexlet.calendar.slots.BookingWindow
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -48,6 +50,6 @@ fun Application.module(
 
     routing {
         healthRoutes()
-        meetingTypeRoutes(MeetingTypeRepository(dataSource), clock)
+        meetingTypeRoutes(MeetingTypeRepository(dataSource), BookingRepository(dataSource), BookingWindow(), clock)
     }
 }
