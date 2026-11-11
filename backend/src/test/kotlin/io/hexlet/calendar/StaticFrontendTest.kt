@@ -82,6 +82,7 @@ class StaticFrontendTest {
             val response = client.get("/api/no-such-thing")
 
             assertEquals(HttpStatusCode.NotFound, response.status)
-            assertTrue(!response.bodyAsText().contains("<title>"))
+            // В контракте нет кода ошибки для неизвестного эндпоинта — тело пустое, без выдуманного `code`.
+            assertEquals("", response.bodyAsText())
         }
 }

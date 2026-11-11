@@ -9,12 +9,13 @@ import java.io.File
 
 /**
  * Собранный frontend (в контейнере — `STATIC_DIR`): файлы как есть, остальные пути — `index.html`,
- * чтобы клиентский роутинг работал при прямом заходе. Неизвестные `/api/...` — 404 JSON, а не страница.
+ * чтобы клиентский роутинг работал при прямом заходе. Неизвестные `/api/...` — 404 без тела, а не страница.
  */
 fun Route.frontendRoutes(dir: File) {
     route("/api/{...}") {
         handle {
-            call.respond(HttpStatusCode.NotFound, ApiError("not_found", "Нет такого эндпоинта"))
+            // Пустое тело: у неизвестного эндпоинта нет кода ошибки в контракте (api/main.tsp).
+            call.respond(HttpStatusCode.NotFound)
         }
     }
     staticFiles("/", dir) {
