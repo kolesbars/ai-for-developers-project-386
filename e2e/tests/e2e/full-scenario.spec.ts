@@ -19,7 +19,7 @@ test('Владелец создаёт Тип встречи, Гость запи
 
   // Владелец создаёт Тип встречи в админке.
   await page.goto('/admin')
-  await page.getByRole('navigation', { name: 'Разделы админки' }).getByRole('button', { name: /^Типы встреч/ }).click()
+  await page.getByRole('navigation', { name: 'Меню Владельца' }).getByRole('button', { name: /^Типы встреч/ }).click()
   await page.getByRole('button', { name: '+ Новый тип' }).click()
   const dialog = page.getByRole('dialog', { name: 'Новый Тип встречи' })
   await dialog.getByRole('textbox', { name: 'Название' }).fill(name)
@@ -65,7 +65,7 @@ test('Владелец создаёт Тип встречи, Гость запи
 
   // Владелец видит встречу в «Предстоящих».
   await page.goto('/admin')
-  await page.getByRole('navigation', { name: 'Разделы админки' }).getByRole('button', { name: /^Предстоящие встречи/ }).click()
+  await page.getByRole('navigation', { name: 'Меню Владельца' }).getByRole('button', { name: /^Предстоящие встречи/ }).click()
   const meeting = page.getByRole('article').filter({ hasText: guestName })
   await expect(meeting).toHaveCount(1)
   await expect(meeting).toContainText(new RegExp(`^${label}–\\d\\d:\\d\\d`))

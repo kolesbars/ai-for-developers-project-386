@@ -1,7 +1,8 @@
 import { Alert, Avatar, Badge, Box, Button, Container, Flex, Group, Loader, Modal, NavLink, Stack, Text } from '@mantine/core'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { api, type components } from '../api/client'
+import { type Loadable, useLoad } from '../api/useLoad'
 import { initials } from '../format'
 import { homePath } from '../routes'
 import { CreateMeetingTypeForm } from './admin/CreateMeetingTypeForm'
@@ -9,33 +10,6 @@ import { type MeetingType, MeetingTypesSection } from './admin/MeetingTypesSecti
 import { type Booking, UpcomingMeetings } from './admin/UpcomingMeetings'
 
 type Owner = components['schemas']['Owner']
-
-type Loadable<T> = { state: 'loading' } | { state: 'error' } | { state: 'ready'; data: T }
-
-/**
- * Загружает данные раздела; `data` нет — ошибка (openapi-fetch не бросает на 4xx/5xx).
- * Второй элемент — правка загруженных данных (например, добавить созданный Тип встречи).
- */
-function useLoad<T>(load: () => Promise<{ data?: T }>): [Loadable<T>, (update: (data: T) => T) => void] {
-  const [value, setValue] = useState<Loadable<T>>({ state: 'loading' })
-  useEffect(() => {
-    let active = true
-    load()
-      .then(({ data }) => data ?? Promise.reject(new Error('no data')))
-      .then(
-        (data) => active && setValue({ state: 'ready', data }),
-        () => active && setValue({ state: 'error' }),
-      )
-    return () => {
-      active = false
-    }
-    // Загрузка один раз при открытии страницы.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-  const update = (change: (data: T) => T) =>
-    setValue((current) => (current.state === 'ready' ? { state: 'ready', data: change(current.data) } : current))
-  return [value, update]
-}
 
 const count = (value: Loadable<unknown[]>) =>
   value.state === 'ready' && (
@@ -46,7 +20,7 @@ const count = (value: Loadable<unknown[]>) =>
 
 function Section<T>({ value, children }: { value: Loadable<T>; children: (data: T) => React.ReactNode }) {
   if (value.state === 'loading') return <Loader aria-label="Загрузка" />
-  if (value.state === 'error')
+  if (value.state !== 'ready')
     return (
       <Alert color="red" role="alert">
         Не удалось загрузить данные. Обновите страницу.
@@ -57,16 +31,16 @@ function Section<T>({ value, children }: { value: Loadable<T>; children: (data: 
 
 /** Админка Владельца `/admin` (spec §7): боковое меню и разделы. */
 export function AdminPage() {
-  const [owner] = useLoad<Owner>(() => api.GET('/api/owner'))
-  const [bookings] = useLoad<Booking[]>(() => api.GET('/api/bookings'))
-  const [meetingTypes, updateMeetingTypes] = useLoad<MeetingType[]>(() => api.GET('/api/meeting-types'))
+  const [owner] = useLoad<Owner>(() => api.GET('/api/owner'), [])
+  const [bookings] = useLoad<Booking[]>(() => api.GET('/api/bookings'), [])
+  const [meetingTypes, updateMeetingTypes] = useLoad<MeetingType[]>(() => api.GET('/api/meeting-types'), [])
   const [section, setSection] = useState<'meetings' | 'types'>('meetings')
   const [creating, setCreating] = useState(false)
 
   return (
     <Container size="lg" py="xl">
       <Flex direction={{ base: 'column', sm: 'row' }} gap="xl" align="flex-start">
-        <Stack w={{ base: '100%', sm: 240 }} gap={4} component="nav" aria-label="Разделы админки">
+        <Stack w={{ base: '100%', sm: 240 }} gap={4} component="nav" aria-label="Меню Владельца">
           {owner.state === 'ready' && (
             <Group gap="sm" mb="md" wrap="nowrap">
               <Avatar color="violet" radius="xl" aria-hidden>

@@ -97,7 +97,7 @@ describe('Админка — предстоящие встречи', () => {
   it('боковое меню: Владелец, счётчики разделов, ссылка на страницу Гостей', async () => {
     openAdmin(bookings)
 
-    const nav = screen.getByRole('navigation', { name: 'Разделы админки' })
+    const nav = screen.getByRole('navigation', { name: 'Меню Владельца' })
     expect(await within(nav).findByText('Анна Смирнова')).toBeInTheDocument()
     expect(within(nav).getByText('Asia/Almaty')).toBeInTheDocument()
     expect(await within(nav).findByRole('button', { name: 'Предстоящие встречи 3' })).toBeInTheDocument()
