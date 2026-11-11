@@ -177,6 +177,7 @@ class BookingsTest {
                 listOf(
                     "startAt" to "\"завтра в 10\"",
                     "startAt" to "\"2026-11-12T10:00:00\"",
+                    "startAt" to "\"2026-11-12T10:00:00+05:00\"",
                     "guestName" to "\"\"",
                     "guestName" to "\"${"я".repeat(101)}\"",
                     "guestEmail" to "\"maria\"",

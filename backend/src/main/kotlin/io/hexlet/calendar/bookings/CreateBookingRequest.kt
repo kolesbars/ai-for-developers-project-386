@@ -32,7 +32,8 @@ data class CreateBookingRequest(
     fun validate(): BookingDraft {
         val errors = mutableListOf<FieldError>()
         if (meetingTypeId.isNullOrBlank()) errors += FieldError("meetingTypeId", "Выберите Тип встречи")
-        val start = startAt?.let { runCatching { Instant.parse(it) }.getOrNull() }
+        // Контракт — `utcDateTime`: только UTC с `Z`; `Instant.parse` принял бы и смещение `+05:00`.
+        val start = startAt?.takeIf { it.endsWith("Z") }?.let { runCatching { Instant.parse(it) }.getOrNull() }
         if (start == null) errors += FieldError("startAt", "Время начала — момент ISO 8601, например 2026-11-12T05:00:00Z")
         if (guestName == null || guestName.isBlank() || guestName.length > 100) {
             errors += FieldError("guestName", "Имя обязательно, до 100 символов")
