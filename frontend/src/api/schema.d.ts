@@ -4,6 +4,41 @@
  */
 
 export interface paths {
+    "/api/bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Предстоящие встречи всех Типов (ещё не закончившиеся), по возрастанию `startAt`. */
+        get: operations["listUpcomingBookings"];
+        put?: never;
+        /** @description Создание Бронирования Гостем. */
+        post: operations["createBooking"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bookings/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Одно Бронирование — для страницы подтверждения. */
+        get: operations["getBooking"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -21,14 +56,213 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/meeting-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Каталог Типов встреч. */
+        get: operations["listMeetingTypes"];
+        put?: never;
+        /** @description Создание Типа встречи (Владелец). */
+        post: operations["createMeetingType"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/meeting-types/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Один Тип встречи. */
+        get: operations["getMeetingType"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/meeting-types/{id}/slots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Все старты Окна записи (14 дней с сегодняшнего по часовому поясу Владельца,
+         *     пн–пт 09:00–18:00, шаг 30 минут) со статусом, по возрастанию `startAt`.
+         *     Прошедшие старты не возвращаются.
+         */
+        get: operations["listSlots"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/owner": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Профиль Владельца. */
+        get: operations["getOwner"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Бронирование. */
+        Booking: {
+            id: components["schemas"]["BookingId"];
+            meetingTypeId: components["schemas"]["MeetingTypeId"];
+            /** @description Название Типа встречи на момент чтения — для подтверждения и списка Владельца. */
+            meetingTypeName: string;
+            /**
+             * Format: date-time
+             * @description Начало, UTC.
+             */
+            startAt: string;
+            /**
+             * Format: date-time
+             * @description Окончание, UTC; вычисляет сервер.
+             */
+            endAt: string;
+            guestName: string;
+            guestEmail: string;
+            comment?: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /**
+         * Format: uuid
+         * @description Идентификатор Бронирования (UUID), выдаёт сервер.
+         */
+        BookingId: string;
+        /** @description Бронирование с таким id не найдено. */
+        BookingNotFoundError: {
+            /** @enum {string} */
+            code: "booking_not_found";
+            message: string;
+        };
+        /** @description Запрос Гостя на Бронирование. */
+        CreateBookingRequest: {
+            meetingTypeId: components["schemas"]["MeetingTypeId"];
+            /**
+             * Format: date-time
+             * @description Начало встречи, UTC; должно совпадать со стартом свободного Слота.
+             */
+            startAt: string;
+            guestName: string;
+            /** Format: email */
+            guestEmail: string;
+            comment?: string;
+        };
+        /** @description Ошибка проверки одного поля. */
+        FieldError: {
+            /** @description Имя поля запроса, например `guestEmail`. */
+            field: string;
+            /** @description Понятный человеку текст на русском. */
+            message: string;
+        };
         /** @description Состояние сервиса. */
         Health: {
             /** @enum {string} */
             status: "ok";
+        };
+        /** @description Тип встречи. */
+        MeetingType: {
+            id: components["schemas"]["MeetingTypeId"];
+            name: string;
+            description?: string;
+            /**
+             * Format: int32
+             * @description Длительность в минутах: 15…240, кратно 15.
+             */
+            durationMinutes: number;
+        };
+        /** @description Тип встречи с таким id уже существует. */
+        MeetingTypeExistsError: {
+            /** @enum {string} */
+            code: "meeting_type_exists";
+            message: string;
+        };
+        /** @description id Типа встречи: задаёт Владелец, уникален и неизменяем, используется в адресе `/book/{id}`. */
+        MeetingTypeId: string;
+        /** @description Тип встречи с таким id не найден. */
+        MeetingTypeNotFoundError: {
+            /** @enum {string} */
+            code: "meeting_type_not_found";
+            message: string;
+        };
+        /** @description Профиль Владельца, задаётся конфигурацией сервера. */
+        Owner: {
+            name: string;
+            /** @description Короткое описание для страниц Гостя. */
+            bio: string;
+            /** @description Часовой пояс Рабочих часов, IANA (`Asia/Almaty`). */
+            timeZone: string;
+        };
+        /** @description Слот: возможное время начала встречи выбранного Типа встречи. */
+        Slot: {
+            /**
+             * Format: date-time
+             * @description Начало, UTC.
+             */
+            startAt: string;
+            /**
+             * Format: date-time
+             * @description Окончание = начало + длительность Типа встречи, UTC.
+             */
+            endAt: string;
+            /**
+             * @description `busy` — интервал `[startAt, endAt)` пересекается с любым Бронированием.
+             * @enum {string}
+             */
+            status: "available" | "busy";
+        };
+        /**
+         * @description Время пересекается с существующим Бронированием любого Типа встречи
+         *     (в том числе проигравший одновременный запрос).
+         */
+        SlotTakenError: {
+            /** @enum {string} */
+            code: "slot_taken";
+            message: string;
+        };
+        /** @description Старт вне Окна записи или Рабочих часов, не на сетке :00/:30 или уже в прошлом. */
+        SlotUnavailableError: {
+            /** @enum {string} */
+            code: "slot_unavailable";
+            message: string;
+        };
+        /** @description Поля запроса не прошли проверку. */
+        ValidationError: {
+            /** @enum {string} */
+            code: "validation_failed";
+            message: string;
+            fieldErrors: components["schemas"]["FieldError"][];
         };
     };
     responses: never;
@@ -39,6 +273,120 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    listUpcomingBookings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Booking"][];
+                };
+            };
+        };
+    };
+    createBooking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBookingRequest"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded and a new resource has been created as a result. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Booking"];
+                };
+            };
+            /** @description Поля запроса не прошли проверку. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
+            };
+            /** @description Тип встречи с таким id не найден. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingTypeNotFoundError"];
+                };
+            };
+            /**
+             * @description Время пересекается с существующим Бронированием любого Типа встречи
+             *     (в том числе проигравший одновременный запрос).
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SlotTakenError"];
+                };
+            };
+            /** @description Старт вне Окна записи или Рабочих часов, не на сетке :00/:30 или уже в прошлом. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SlotUnavailableError"];
+                };
+            };
+        };
+    };
+    getBooking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Booking"];
+                };
+            };
+            /** @description Бронирование с таким id не найдено. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingNotFoundError"];
+                };
+            };
+        };
+    };
     getHealth: {
         parameters: {
             query?: never;
@@ -55,6 +403,150 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    listMeetingTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingType"][];
+                };
+            };
+        };
+    };
+    createMeetingType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeetingType"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded and a new resource has been created as a result. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingType"];
+                };
+            };
+            /** @description Поля запроса не прошли проверку. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
+            };
+            /** @description Тип встречи с таким id уже существует. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingTypeExistsError"];
+                };
+            };
+        };
+    };
+    getMeetingType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingType"];
+                };
+            };
+            /** @description Тип встречи с таким id не найден. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingTypeNotFoundError"];
+                };
+            };
+        };
+    };
+    listSlots: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Slot"][];
+                };
+            };
+            /** @description Тип встречи с таким id не найден. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingTypeNotFoundError"];
+                };
+            };
+        };
+    };
+    getOwner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Owner"];
                 };
             };
         };
