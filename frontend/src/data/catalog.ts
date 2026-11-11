@@ -20,16 +20,16 @@ export const owner: Owner = {
 
 export const meetingTypes: MeetingType[] = [
   {
-    id: 'fe8bce70-67e3-4e23-8ffb-5f344c55496a',
+    id: 'intro',
     title: 'Знакомство',
     description: 'Короткий разговор, чтобы познакомиться и обсудить задачу.',
     durationMinutes: 15,
   },
   {
-    id: 'ae92ea3e-bd30-42bb-b890-f06f7a00b294',
+    id: 'consultation',
     title: 'Консультация',
     description: 'Подробный разбор вашего вопроса с рекомендациями.',
-    durationMinutes: 30,
+    durationMinutes: 60,
   },
 ]
 
