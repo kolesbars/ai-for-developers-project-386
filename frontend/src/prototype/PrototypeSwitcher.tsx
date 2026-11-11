@@ -11,8 +11,8 @@ export function PrototypeSwitcher({
 }: {
   variants: { key: string; name: string }[]
   current: string
-  conflict: boolean
-  onConflict: (v: boolean) => void
+  conflict?: boolean
+  onConflict?: (v: boolean) => void
 }) {
   const [params, setParams] = useSearchParams()
   const idx = Math.max(0, variants.findIndex((v) => v.key === current))
@@ -48,13 +48,13 @@ export function PrototypeSwitcher({
           {variants[idx]!.key} ({variants[idx]!.name})
         </Text>
         <ActionIcon variant="subtle" color="gray.0" onClick={() => go(1)} aria-label="Следующий вариант">→</ActionIcon>
-        <Checkbox
+        {onConflict && <Checkbox
           size="xs"
           color="red"
           label={<Text size="xs" c="white">конфликт при отправке</Text>}
           checked={conflict}
           onChange={(e) => onConflict(e.currentTarget.checked)}
-        />
+        />}
       </Group>
     </Paper>
   )

@@ -38,17 +38,18 @@ export const bookings: Booking[] = (() => {
     const dayStart = base + d * DAY
     const wd = new Date(dayStart + OWNER_OFFSET_MIN * MIN).getUTCDay()
     if (wd === 0 || wd === 6) continue
-    const picks = [[10 * 60, 60], [13 * 60 + 30, 45], [16 * 60, 30]].filter((_, i) => (d + i) % 3 !== 0)
+    const picks = [[10 * 60, 60], [13 * 60 + 30, 15], [16 * 60, 15]].filter((_, i) => (d + i) % 3 !== 0)
     if (d === 3) picks.push([9 * 60, 9 * 60]) // целиком занятый день
     for (const [m, len] of picks) {
       const s = dayStart + (m + OWNER_OFFSET_MIN - OWNER_OFFSET_MIN) * MIN
       out.push({
         id: crypto.randomUUID(),
-        meetingTypeId: 'consultation',
+        meetingTypeId: len === 60 ? 'consultation' : 'intro',
         startAt: new Date(s).toISOString(),
         endAt: new Date(s + len * MIN).toISOString(),
-        guestName: 'Другой Гость',
-        guestEmail: 'guest@example.com',
+        guestName: ['Иван Петров', 'Мария Смирнова', 'Олег Ким'][(d + m) % 3]!,
+        guestEmail: ['ivan@example.com', 'maria@example.com', 'oleg@example.com'][(d + m) % 3]!,
+        comment: m === 10 * 60 ? 'Хочу обсудить контракт API' : undefined,
       })
     }
   }
