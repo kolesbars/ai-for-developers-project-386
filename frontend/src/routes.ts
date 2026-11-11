@@ -6,3 +6,7 @@ export const homePath = '/'
 export const bookingRoute = '/book/:id'
 
 export const bookingPath = (meetingTypeId: string) => `/book/${meetingTypeId}`
+
+export const confirmationRoute = '/booking/:bookingId'
+
+export const confirmationPath = (bookingId: string) => `/booking/${bookingId}`

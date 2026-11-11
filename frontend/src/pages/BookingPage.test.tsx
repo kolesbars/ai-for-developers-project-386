@@ -22,11 +22,13 @@ const slot = (startAt: string, status: 'available' | 'busy' = 'available') => ({
   status,
 })
 
-const openBookingPage = (slots: unknown[]) => {
+/** @param more — дополнительные или заменяющие ответы API (например, на `POST /api/bookings`). */
+const openBookingPage = (slots: unknown[], more: Parameters<typeof mockApi>[0] = {}) => {
   const fetch = mockApi({
     'GET /api/owner': { body: owner },
     'GET /api/meeting-types/consultation': { body: consultation },
     'GET /api/meeting-types/consultation/slots': { body: slots },
+    ...more,
   })
   renderAt('/book/consultation')
   return fetch
@@ -200,4 +202,214 @@ describe('страница записи: выбор времени', () => {
     const summary = within(screen.getByRole('region', { name: 'Сводка' }))
     expect(summary.queryByText('07:00–08:00')).not.toBeInTheDocument()
   })
+})
+
+/** Выбирает 07:00 четверга (первого дня) и жмёт «Продолжить». */
+const continueAt0700 = async () => {
+  fireEvent.click((await times()).getByRole('button', { name: '07:00' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Продолжить · 07:00–08:00' }))
+  return within(await screen.findByRole('form', { name: 'Ваши данные' }))
+}
+
+describe('страница записи: форма «Ваши данные»', () => {
+  it('заменяет календарь и время, сводка остаётся; «← Другое время» возвращает к выбору', async () => {
+    openBookingPage([slot('2026-11-12T04:00:00Z'), slot('2026-11-12T05:00:00Z')])
+
+    const form = await continueAt0700()
+    expect(form.getByRole('textbox', { name: 'Имя' })).toBeInTheDocument()
+    expect(form.getByRole('textbox', { name: 'Email' })).toBeInTheDocument()
+    expect(form.getByRole('textbox', { name: /Комментарий/ })).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Выберите день' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Время' })).not.toBeInTheDocument()
+    const summary = within(screen.getByRole('region', { name: 'Сводка' }))
+    expect(summary.getByText('07:00–08:00')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '← Другое время' }))
+
+    expect((await times()).getByRole('button', { name: '07:00' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.queryByRole('form', { name: 'Ваши данные' })).not.toBeInTheDocument()
+  })
+
+  it('проверяет поля до отправки и не обращается к серверу', async () => {
+    const fetch = openBookingPage([slot('2026-11-12T04:00:00Z')])
+
+    const form = await continueAt0700()
+    fireEvent.change(form.getByRole('textbox', { name: 'Email' }), {
+      target: { value: 'maria@example' },
+    })
+    fireEvent.change(form.getByRole('textbox', { name: /Комментарий/ }), {
+      target: { value: 'x'.repeat(501) },
+    })
+    fireEvent.click(form.getByRole('button', { name: 'Записаться' }))
+
+    expect(form.getByRole('textbox', { name: 'Имя' })).toHaveAccessibleDescription('Укажите имя')
+    expect(form.getByRole('textbox', { name: 'Email' })).toHaveAccessibleDescription(
+      'Проверьте email',
+    )
+    expect(form.getByRole('textbox', { name: /Комментарий/ })).toHaveAccessibleDescription(
+      /Не больше 500 символов/,
+    )
+    expect(fetch.mock.calls.map(([request]) => (request as Request).method)).not.toContain('POST')
+  })
+})
+
+const booking = {
+  id: '6f1c2d4e-0b7a-4a51-9a63-2f0d8f6c1e10',
+  meetingTypeId: 'consultation',
+  meetingTypeName: 'Консультация',
+  startAt: '2026-11-12T04:00:00Z',
+  endAt: '2026-11-12T05:00:00Z',
+  guestName: 'Мария Смирнова',
+  guestEmail: 'maria@example.com',
+  comment: 'Про контракт API',
+  createdAt: '2026-11-12T03:00:00Z',
+}
+
+const fillGuest = (form: ReturnType<typeof within>, comment = '') => {
+  fireEvent.change(form.getByRole('textbox', { name: 'Имя' }), {
+    target: { value: ' Мария Смирнова ' },
+  })
+  fireEvent.change(form.getByRole('textbox', { name: 'Email' }), {
+    target: { value: 'maria@example.com' },
+  })
+  fireEvent.change(form.getByRole('textbox', { name: /Комментарий/ }), {
+    target: { value: comment },
+  })
+}
+
+const postedBodies = async (fetch: ReturnType<typeof mockApi>) =>
+  Promise.all(
+    fetch.mock.calls
+      .map(([request]) => request as Request)
+      .filter((request) => request.method === 'POST')
+      .map((request) => request.clone().json()),
+  )
+
+describe('страница записи: отправка', () => {
+  it('создаёт Бронирование и открывает подтверждение', async () => {
+    const fetch = openBookingPage([slot('2026-11-12T04:00:00Z')], {
+      'POST /api/bookings': { status: 201, body: booking },
+      [`GET /api/bookings/${booking.id}`]: { body: booking },
+    })
+
+    const form = await continueAt0700()
+    fillGuest(form, 'Про контракт API')
+    fireEvent.click(form.getByRole('button', { name: 'Записаться' }))
+
+    expect(await screen.findByRole('heading', { name: 'Вы записаны' })).toBeInTheDocument()
+    expect(await postedBodies(fetch)).toEqual([
+      {
+        meetingTypeId: 'consultation',
+        startAt: '2026-11-12T04:00:00Z',
+        guestName: 'Мария Смирнова',
+        guestEmail: 'maria@example.com',
+        comment: 'Про контракт API',
+      },
+    ])
+  })
+
+  it('без комментария не отправляет поле comment', async () => {
+    const fetch = openBookingPage([slot('2026-11-12T04:00:00Z')], {
+      'POST /api/bookings': { status: 201, body: { ...booking, comment: undefined } },
+      [`GET /api/bookings/${booking.id}`]: { body: { ...booking, comment: undefined } },
+    })
+
+    const form = await continueAt0700()
+    fillGuest(form)
+    fireEvent.click(form.getByRole('button', { name: 'Записаться' }))
+
+    expect(await screen.findByRole('heading', { name: 'Вы записаны' })).toBeInTheDocument()
+    expect((await postedBodies(fetch))[0]).not.toHaveProperty('comment')
+  })
+
+  it('показывает fieldErrors сервера под полями', async () => {
+    openBookingPage([slot('2026-11-12T04:00:00Z')], {
+      'POST /api/bookings': {
+        status: 400,
+        body: {
+          code: 'validation_failed',
+          message: 'Проверьте поля формы',
+          fieldErrors: [{ field: 'guestEmail', message: 'Некорректный email' }],
+        },
+      },
+    })
+
+    const form = await continueAt0700()
+    fillGuest(form)
+    fireEvent.click(form.getByRole('button', { name: 'Записаться' }))
+
+    expect(
+      await form.findByText('Некорректный email'),
+    ).toBeInTheDocument()
+    expect(form.getByRole('textbox', { name: 'Email' })).toHaveAccessibleDescription(
+      'Некорректный email',
+    )
+    expect(form.getByRole('textbox', { name: 'Email' })).toHaveValue('maria@example.com')
+  })
+
+  it('сообщает о сбое отправки, данные формы остаются', async () => {
+    openBookingPage([slot('2026-11-12T04:00:00Z')], {
+      'POST /api/bookings': { status: 500, body: { code: 'oops', message: 'oops' } },
+    })
+
+    const form = await continueAt0700()
+    fillGuest(form)
+    fireEvent.click(form.getByRole('button', { name: 'Записаться' }))
+
+    expect(await form.findByRole('alert')).toHaveTextContent('Не удалось записаться')
+    expect(form.getByRole('textbox', { name: 'Имя' })).toHaveValue(' Мария Смирнова ')
+  })
+})
+
+describe('страница записи: конфликт', () => {
+  const thursday = slot('2026-11-12T04:00:00Z') // чт 07:00 Москвы
+  const monday0900 = '2026-11-16T06:00:00Z' // пн 09:00 Москвы
+  const monday1000 = '2026-11-16T07:00:00Z' // пн 10:00 Москвы
+
+  it.each([
+    [
+      409,
+      'slot_taken',
+      'Это время только что заняли. Выберите другое — ниже актуальное расписание',
+    ],
+    [422, 'slot_unavailable', 'Это время больше недоступно'],
+  ])(
+    '%i %s: возврат к выбору времени, сообщение, новое расписание, данные формы сохранены',
+    async (status, code, notice) => {
+      const fetch = openBookingPage([], {
+        'GET /api/meeting-types/consultation/slots': [
+          { body: [thursday, slot(monday0900), slot(monday1000)] },
+          { body: [thursday, slot(monday0900), slot(monday1000, 'busy')] },
+        ],
+        'POST /api/bookings': { status, body: { code, message: 'с сервера' } },
+      })
+
+      fireEvent.click((await calendar()).getByRole('button', { name: 'понедельник, 16 ноября' }))
+      fireEvent.click((await times()).getByRole('button', { name: '10:00' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Продолжить · 10:00–11:00' }))
+      const form = within(await screen.findByRole('form', { name: 'Ваши данные' }))
+      fillGuest(form, 'Про контракт API')
+      fireEvent.click(form.getByRole('button', { name: 'Записаться' }))
+
+      // Гость снова выбирает время на том же дне, расписание — уже обновлённое.
+      const list = await times()
+      expect(await list.findByRole('button', { name: '10:00 занято' })).toBeDisabled()
+      expect(list.getByRole('alert')).toHaveTextContent(notice)
+      expect(list.getByRole('heading', { name: 'понедельник, 16 ноября' })).toBeInTheDocument()
+      expect(list.getByRole('button', { name: 'Выберите время' })).toBeDisabled()
+      expect(
+        fetch.mock.calls.filter(([r]) => (r as Request).url.endsWith('/slots')),
+      ).toHaveLength(2)
+
+      fireEvent.click(list.getByRole('button', { name: '09:00' }))
+      fireEvent.click(list.getByRole('button', { name: 'Продолжить · 09:00–10:00' }))
+      const again = within(await screen.findByRole('form', { name: 'Ваши данные' }))
+      expect(again.getByRole('textbox', { name: 'Имя' })).toHaveValue(' Мария Смирнова ')
+      expect(again.getByRole('textbox', { name: 'Email' })).toHaveValue('maria@example.com')
+      expect(again.getByRole('textbox', { name: /Комментарий/ })).toHaveValue('Про контракт API')
+    },
+  )
 })
