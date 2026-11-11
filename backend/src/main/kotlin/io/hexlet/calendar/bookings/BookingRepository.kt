@@ -110,6 +110,15 @@ class BookingRepository(
         }
     }
 
+    /** Предстоящие встречи всех Типов: ещё не закончившиеся (`endAt > now`), по возрастанию `startAt`. */
+    suspend fun upcoming(now: Instant): List<Booking> =
+        dataSource.query { connection ->
+            connection.prepareStatement("$SELECT WHERE b.end_at > ? ORDER BY b.start_at").use { statement ->
+                statement.setTimestamp(1, Timestamp.from(now))
+                statement.executeQuery().use { rows -> generateSequence { if (rows.next()) rows.toBooking() else null }.toList() }
+            }
+        }
+
     private fun ResultSet.toBooking() =
         Booking(
             id = getString("id"),

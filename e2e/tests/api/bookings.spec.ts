@@ -15,16 +15,25 @@ async function freeStart(request: APIRequestContext, meetingTypeId: string) {
   return available[Math.floor(Math.random() * available.length)].startAt
 }
 
+/** Бронирует случайный свободный старт; если параллельный тест успел занять то же время — берёт другое. */
+async function bookFreeStart(request: APIRequestContext, meetingTypeId: string, extra: object = {}) {
+  for (let attempt = 1; ; attempt++) {
+    const startAt = await freeStart(request, meetingTypeId)
+    const response = await request.post('/api/bookings', {
+      data: { meetingTypeId, startAt, ...guest, ...extra },
+    })
+    if (response.status() !== 409 || attempt === 3) return { startAt, response }
+  }
+}
+
 test('POST /api/bookings — 201, повторно на то же время — 409 slot_taken', async ({ request }) => {
   const meetingType = await createMeetingType(request, {
     id: uniqueId('book'),
     name: 'Консультация',
     durationMinutes: 30,
   })
-  const startAt = await freeStart(request, meetingType.id)
-
-  const created = await request.post('/api/bookings', {
-    data: { meetingTypeId: meetingType.id, startAt, ...guest, comment: 'Про контракт API' },
+  const { startAt, response: created } = await bookFreeStart(request, meetingType.id, {
+    comment: 'Про контракт API',
   })
 
   expect(created.status()).toBe(201)
@@ -70,4 +79,23 @@ test('POST /api/bookings — 422 slot_unavailable для старта в про�
 
   expect(response.status()).toBe(422)
   expect(await response.json()).toMatchObject({ code: 'slot_unavailable' })
+})
+
+test('GET /api/bookings — новое Бронирование среди Предстоящих, по возрастанию startAt', async ({ request }) => {
+  const meetingType = await createMeetingType(request, {
+    id: uniqueId('upcoming'),
+    name: 'Созвон',
+    durationMinutes: 15,
+  })
+  const { response: created } = await bookFreeStart(request, meetingType.id)
+  expect(created.status()).toBe(201)
+  const booking = await created.json()
+
+  const response = await request.get('/api/bookings')
+
+  expect(response.status()).toBe(200)
+  const upcoming: { startAt: string }[] = await response.json()
+  expect(upcoming).toContainEqual(booking)
+  const starts = upcoming.map((b) => b.startAt)
+  expect(starts).toEqual([...starts].sort())
 })

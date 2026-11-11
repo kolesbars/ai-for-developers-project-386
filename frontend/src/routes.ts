@@ -3,6 +3,8 @@
 
 export const homePath = '/'
 
+export const adminPath = '/admin'
+
 export const bookingRoute = '/book/:id'
 
 export const bookingPath = (meetingTypeId: string) => `/book/${meetingTypeId}`
