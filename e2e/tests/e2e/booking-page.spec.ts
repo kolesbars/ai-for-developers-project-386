@@ -36,3 +36,47 @@ test('Гость выбирает день и время на странице �
   ).toBeEnabled()
   await expect(summary.getByText(new RegExp(`^${label}–`))).toBeVisible()
 })
+
+test('Гость бронирует время и видит подтверждение, которое переживает перезагрузку', async ({
+  page,
+  request,
+}) => {
+  const meetingType = await createMeetingType(request, {
+    id: uniqueId('e2e-confirm'),
+    name: `Созвон ${Date.now()}`,
+    durationMinutes: 30,
+  })
+  const guestName = `Гость ${Date.now()}`
+
+  await page.goto(`/book/${meetingType.id}`)
+  // Бронирования пересекаются глобально, а БД общая для параллельных тестов: берём случайное
+  // свободное время выбранного дня, а не первое.
+  const free = page.getByRole('region', { name: 'Время' }).getByRole('button', { name: /^\d\d:\d\d$/ })
+  await expect(free.first()).toBeVisible()
+  const time = free.nth(Math.floor(Math.random() * (await free.count())))
+  const label = await time.innerText()
+  await time.click()
+  await page.getByRole('button', { name: /^Продолжить · / }).click()
+
+  const form = page.getByRole('form', { name: 'Ваши данные' })
+  await form.getByRole('button', { name: 'Записаться' }).click()
+  await expect(form.getByText('Укажите имя')).toBeVisible()
+  await form.getByRole('textbox', { name: 'Имя' }).fill(guestName)
+  await form.getByRole('textbox', { name: 'Email' }).fill('guest@example.com')
+  await form.getByRole('button', { name: 'Записаться' }).click()
+
+  await expect(page).toHaveURL(/\/booking\/[0-9a-f-]{36}$/)
+  const expectConfirmation = async () => {
+    await expect(page.getByRole('heading', { name: 'Вы записаны' })).toBeVisible()
+    await expect(page.getByText(meetingType.name)).toBeVisible()
+    await expect(page.getByText(new RegExp(`, ${label}–\\d\\d:\\d\\d$`))).toBeVisible()
+    await expect(page.getByText(`${guestName} · guest@example.com`)).toBeVisible()
+  }
+  await expectConfirmation()
+  await page.reload()
+  await expectConfirmation()
+  await expect(page.getByRole('link', { name: 'Записаться ещё' })).toHaveAttribute(
+    'href',
+    `/book/${meetingType.id}`,
+  )
+})
