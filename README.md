@@ -77,27 +77,61 @@ PostgreSQL во временном каталоге — данные живут 
 
 ## Запуск в контейнере
 
-Нужны Docker и Docker Compose (для разработки они не обязательны — хватает mise).
+Один образ из корневого `Dockerfile`: Ktor отдаёт API под `/api` и собранный frontend (остальные
+пути — `index.html`, чтобы работал клиентский роутинг). Многоэтапная сборка: frontend (Node) и fat
+jar (JDK 21), в итоговом образе — только JRE, `app.jar` и статика; процесс работает не от root.
+
+```bash
+docker build -t calendar .
+docker run --rm -e PORT=8080 -p 8080:8080 calendar
+```
+
+Приложение стартует само и слушает порт из `PORT` — http://localhost:8080. Без `DATABASE_URL`
+внутри контейнера поднимается embedded PostgreSQL.
+
+С отдельным PostgreSQL 17 (том `db-data`, данные переживают перезапуск):
 
 ```bash
 docker compose up --build
 ```
 
-Приложение — http://localhost:8080: один контейнер, где Ktor отдаёт API под `/api` и собранный
-frontend (остальные пути — `index.html`, чтобы работал клиентский роутинг), плюс отдельный
-PostgreSQL 17 с томом `db-data`. Многоэтапный `Dockerfile` собирает frontend (Node) и fat jar
-(JDK 21), в итоговом образе — только JRE, `app.jar` и статика.
-
 | Переменная | Значение |
 |---|---|
-| `DATABASE_URL` | задана в `docker-compose.yml` (сервис `db`) |
-| `BACKEND_PORT` | порт внутри контейнера, `8080` |
+| `PORT` | порт HTTP-сервера; в образе по умолчанию `8080`, хостинг задаёт свой |
+| `BACKEND_PORT` | запасной вариант без `PORT` (локальная разработка, e2e) |
+| `DATABASE_URL` | PostgreSQL (`postgres://user:pass@host:port/db` или `jdbc:…`); не задан — embedded |
 | `STATIC_DIR` | каталог со статикой frontend, в образе `/app/public` |
 | `OWNER_NAME`, `OWNER_BIO`, `OWNER_TIME_ZONE` | профиль Владельца; берутся из окружения или `.env` |
-| `APP_PORT` | порт на хосте, по умолчанию `8080` |
+| `APP_PORT` | порт на хосте для `docker compose`, по умолчанию `8080` |
 
-Остановить и удалить данные: `docker compose down --volumes`. CI (job `docker`) собирает образ,
-поднимает compose и проверяет, что `GET /api/health` отвечает `200`.
+Остановить compose и удалить данные: `docker compose down --volumes`. CI (job `docker`) поднимает
+compose и отдельно запускает образ с `PORT=3000` без БД, проверяя `GET /api/health` и `/`.
+
+## Деплой
+
+Публичная ссылка: **DEPLOY_URL** (Гость — `/`, Владелец — `/admin`).
+
+Сервис развёрнут на [Render](https://render.com) (Free Web Service) по Blueprint `render.yaml`:
+Render собирает корневой `Dockerfile` при каждом push в `main` и задаёт `PORT` сам. Чтобы развернуть
+свою копию: Render Dashboard → New → Blueprint → выбрать репозиторий.
+
+**Данные сбрасываются.** На хостинге не задан `DATABASE_URL`, поэтому используется embedded
+PostgreSQL внутри контейнера: Типы встреч и бронирования пропадают при каждом перезапуске —
+после деплоя, рестарта и пробуждения (бесплатный инстанс засыпает после ~15 минут без запросов,
+первый запрос после этого идёт ~1 минуту). Чтобы данные сохранялись, задайте `DATABASE_URL`
+внешнего PostgreSQL в Environment сервиса.
+
+## MCP для агента
+
+В `.mcp.json` — проектная конфигурация MCP для Claude Code (секретов в файле нет):
+
+- `render` — [Render MCP](https://render.com/docs/mcp-server): статус деплоев, логи, переменные
+  сервиса. Ключ берётся из переменной окружения: создайте API key в Render (Account Settings →
+  API Keys) и перед запуском `claude` выполните `export RENDER_API_KEY=…`. Ключ не коммитьте.
+- `playwright` — [Playwright MCP](https://github.com/microsoft/playwright-mcp): агент проходит
+  сценарий Гостя и Владельца в браузере по публичной ссылке. Ключей не нужно.
+
+При первом запуске Claude Code спросит, доверять ли серверам из `.mcp.json`.
 
 ## Коммиты
 

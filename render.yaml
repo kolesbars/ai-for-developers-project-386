@@ -1,0 +1,12 @@
+# Render Blueprint: веб-сервис из корневого Dockerfile. Render сам задаёт PORT.
+# DATABASE_URL не задан — внутри контейнера embedded PostgreSQL, данные сбрасываются при перезапуске.
+services:
+  - type: web
+    name: calendar
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeploy: true

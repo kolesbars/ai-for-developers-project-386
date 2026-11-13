@@ -75,3 +75,24 @@ jobs:
       - name: Stop compose
         if: always()
         run: docker compose down --volumes
+
+      # Так образ запускает проверка и хостинг: один контейнер, порт из PORT, без DATABASE_URL
+      # (embedded PostgreSQL внутри).
+      - name: Standalone container on PORT=3000
+        run: |
+          docker build --quiet --tag calendar .
+          docker run --detach --name standalone -e PORT=3000 -p 3000:3000 calendar
+          for i in $(seq 1 90); do
+            if curl -fsS http://localhost:3000/api/health; then
+              echo
+              curl -fsS http://localhost:3000/ | grep -q '<div id="root">'
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "контейнер не ответил на PORT=3000 за 180 с"
+          exit 1
+
+      - name: Standalone container logs
+        if: always()
+        run: docker logs standalone || true

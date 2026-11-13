@@ -236,7 +236,7 @@ POST /api/bookings
 - Контейнер: многоэтапный `Dockerfile` (сборка frontend и backend, статика отдаётся Ktor) и
   `docker-compose.yml` с отдельным PostgreSQL (`DATABASE_URL`). CI собирает образ и проверяет, что
   контейнер поднимается и `GET /api/health` отвечает `200`. Локально Docker не обязателен.
-- Конфигурация: `BACKEND_PORT`, `DATABASE_URL`, профиль Владельца (имя, описание, часовой пояс).
+- Конфигурация: `PORT` (запасной — `BACKEND_PORT`), `DATABASE_URL`, профиль Владельца (имя, описание, часовой пояс).
 
 ## 10. Вне рамок
 

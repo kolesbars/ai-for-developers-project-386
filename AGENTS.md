@@ -11,7 +11,7 @@ Contract-first: любое изменение API начинается с кон
   (OpenAPI 3.0.0, committed) → `frontend/src/api/schema.d.ts` (SDK, committed).
 - **Backend**: Kotlin/Ktor в `backend/`, реализует контракт вручную (без codegen): DTO `@Serializable`
   должны совпадать со схемами, проверка — тесты через `testApplication` на `Application.module()`.
-  Роуты — `Route.xxxRoutes()` в пакете `routes`, все эндпоинты под `/api`. Порт — `BACKEND_PORT`.
+  Роуты — `Route.xxxRoutes()` в пакете `routes`, все эндпоинты под `/api`. Порт — `PORT` (запасной — `BACKEND_PORT`).
 - **Frontend**: React/TypeScript/Vite/Mantine в `frontend/`, роутинг — `react-router`
   (пути в `src/routes.ts`). К backend — только через `api` из `src/api/client.ts`; Vite проксирует `/api`.
   Тесты (Vitest) рендерят внутри `MantineProvider` и `MemoryRouter`.

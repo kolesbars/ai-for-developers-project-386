@@ -28,10 +28,19 @@ import javax.sql.DataSource
 private const val DEFAULT_PORT = 8080
 
 fun main() {
-    val port = System.getenv("BACKEND_PORT")?.toIntOrNull() ?: DEFAULT_PORT
+    val port = listenPort()
     embeddedServer(Netty, port = port, host = "0.0.0.0", module = { module() })
         .start(wait = true)
 }
+
+/**
+ * Порт HTTP-сервера: `PORT` (его задают хостинги и проверка Docker-образа), затем `BACKEND_PORT`
+ * (локальная разработка и e2e), иначе 8080.
+ */
+fun listenPort(env: (String) -> String? = System::getenv): Int =
+    sequenceOf("PORT", "BACKEND_PORT")
+        .firstNotNullOfOrNull { name -> env(name)?.trim()?.toIntOrNull() }
+        ?: DEFAULT_PORT
 
 /**
  * @param dataSource PostgreSQL; по умолчанию — `DATABASE_URL` или embedded.

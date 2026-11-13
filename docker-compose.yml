@@ -3,7 +3,7 @@ services:
   app:
     build: .
     environment:
-      - BACKEND_PORT=8080
+      - PORT=8080
       - DATABASE_URL=postgres://calendar:calendar@db:5432/calendar
       # Профиль Владельца: берётся из окружения хоста (или .env), без них — значения по умолчанию backend.
       - OWNER_NAME

@@ -1,5 +1,6 @@
 # Образ приложения: Ktor отдаёт API под /api и собранный frontend (SPA-fallback на index.html).
-# Сборка: docker build -t calendar . ; запуск вместе с PostgreSQL — docker compose up --build.
+# Сборка: docker build -t calendar . ; запуск: docker run -e PORT=8080 -p 8080:8080 calendar
+# (без DATABASE_URL — embedded PostgreSQL внутри контейнера); вместе с PostgreSQL — docker compose up --build.
 
 # ---------- frontend ----------
 FROM node:26-slim AS frontend
@@ -28,7 +29,12 @@ FROM eclipse-temurin:21-jre
 WORKDIR /app
 COPY --from=backend /src/backend/build/libs/calendar-backend.jar app.jar
 COPY --from=frontend /src/frontend/dist/ public/
-ENV BACKEND_PORT=8080 \
-    STATIC_DIR=/app/public
+# Embedded PostgreSQL (initdb) отказывается работать от root — запускаемся от обычного пользователя.
+RUN useradd --system --create-home --uid 10001 app
+USER app
+# PORT переопределяют хостинг и проверка; лимит кучи оставляет память embedded PostgreSQL.
+ENV PORT=8080 \
+    STATIC_DIR=/app/public \
+    JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=60"
 EXPOSE 8080
 CMD ["java", "-jar", "/app/app.jar"]
