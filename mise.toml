@@ -83,9 +83,13 @@ description = "ESLint + проверка типов"
 depends = ["api:sdk"]
 run = ["npm run lint --workspace frontend", "npm run typecheck --workspace frontend"]
 
+[tasks."lint:e2e"]
+description = "Проверка типов Playwright-тестов"
+run = "npm run typecheck --workspace e2e"
+
 [tasks.lint]
 description = "Все линтеры"
-depends = ["lint:backend", "lint:frontend"]
+depends = ["lint:backend", "lint:frontend", "lint:e2e"]
 
 [tasks.format]
 description = "Автоисправление стиля"
@@ -104,9 +108,26 @@ description = "Тесты frontend (Vitest)"
 depends = ["api:sdk"]
 run = "npm run test --workspace frontend"
 
+# API- и e2e-тесты Playwright поднимают собранные backend (fat jar, embedded PostgreSQL)
+# и frontend (vite preview) на портах 18080/14173; браузер — установленный Google Chrome.
+[tasks."test:api"]
+description = "API-тесты Playwright (HTTP-запросы к настоящему backend)"
+depends = ["build"]
+run = "npm run test:api --workspace e2e"
+
+[tasks."test:e2e"]
+description = "E2E-тесты Playwright в браузере"
+depends = ["build"]
+run = "npm run test:e2e --workspace e2e"
+
+[tasks."test:playwright"]
+description = "API- и e2e-тесты Playwright одним запуском (общие серверы)"
+depends = ["build"]
+run = "npm run test --workspace e2e"
+
 [tasks.test]
 description = "Все тесты"
-depends = ["test:backend", "test:frontend"]
+depends = ["test:backend", "test:frontend", "test:playwright"]
 
 # ---------- Всё вместе ----------
 
@@ -125,6 +146,14 @@ run = [
   "npm run build --workspace frontend",
 ]
 
+[tasks."check:e2e"]
+description = "Playwright: типы, API- и e2e-тесты на собранных backend и frontend"
+depends = ["check:backend", "check:frontend"]
+run = [
+  "npm run typecheck --workspace e2e",
+  "npm run test --workspace e2e",
+]
+
 [tasks.check]
 description = "Все проверки: контракт, линтеры, тесты, сборка"
-depends = ["check:backend", "check:frontend"]
+depends = ["check:backend", "check:frontend", "check:e2e"]
