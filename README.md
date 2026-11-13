@@ -109,11 +109,19 @@ compose и отдельно запускает образ с `PORT=3000` без 
 
 ## Деплой
 
-Публичная ссылка: **DEPLOY_URL** (Гость — `/`, Владелец — `/admin`).
+Публичная ссылка: **https://calendar-a7mo.onrender.com** (Гость — `/`, Владелец — `/admin`).
 
 Сервис развёрнут на [Render](https://render.com) (Free Web Service) по Blueprint `render.yaml`:
-Render собирает корневой `Dockerfile` при каждом push в `main` и задаёт `PORT` сам. Чтобы развернуть
-свою копию: Render Dashboard → New → Blueprint → выбрать репозиторий.
+Render собирает корневой `Dockerfile` и задаёт `PORT` сам. Blueprint подключён по публичному URL
+репозитория, поэтому авто-деплоя нет: новую версию выкатывает Manual Deploy в Render Dashboard
+(или подключение GitHub к Render). Своя копия: Render Dashboard → New → Blueprint → репозиторий.
+
+Сценарий Гостя и Владельца (включая отказ повторного бронирования) проверяется по публичной ссылке
+тем же набором Playwright, что и локально — без подъёма локальных серверов:
+
+```bash
+E2E_BASE_URL=https://calendar-a7mo.onrender.com npm run test --workspace e2e
+```
 
 **Данные сбрасываются.** На хостинге не задан `DATABASE_URL`, поэтому используется embedded
 PostgreSQL внутри контейнера: Типы встреч и бронирования пропадают при каждом перезапуске —

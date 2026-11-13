@@ -8,7 +8,9 @@ export const uniqueId = (prefix: string) =>
   `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
 
 /** URL backend для прямых запросов из e2e-тестов (в проекте `api` это `baseURL`). */
-export const backendUrl = `http://localhost:${process.env.E2E_BACKEND_PORT ?? 18080}`
+export const backendUrl =
+  process.env.E2E_BASE_URL?.replace(/\/$/, '') ??
+  `http://localhost:${process.env.E2E_BACKEND_PORT ?? 18080}`
 
 export async function createMeetingType(
   request: APIRequestContext,
