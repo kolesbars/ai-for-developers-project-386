@@ -14,7 +14,7 @@ import {
 import { Link, useParams } from 'react-router'
 import { api, type components } from '../api/client'
 import { useLoad, useOwner } from '../api/useLoad'
-import { timeZoneNote } from '../format'
+import { NOTE_COLOR, timeZoneNote } from '../format'
 import { bookingPath, homePath } from '../routes'
 import { icsHref } from './booking/ics'
 import { formatDay, formatRange } from './booking/schedule'
@@ -62,7 +62,7 @@ function Confirmation({ booking, owner }: { booking: Booking; owner: Owner | nul
           <Text fw={600}>{booking.meetingTypeName}</Text>
           <Text>{`${formatDay(new Date(booking.startAt))}, ${formatRange(booking)}`}</Text>
         </Stack>
-        <Text size="sm" c="dimmed">
+        <Text size="sm" c={NOTE_COLOR}>
           {timeZoneNote(owner?.timeZone)}
         </Text>
         <Text size="sm">{`${booking.guestName} · ${booking.guestEmail}`}</Text>

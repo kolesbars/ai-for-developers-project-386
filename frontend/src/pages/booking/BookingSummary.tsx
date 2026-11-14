@@ -1,6 +1,6 @@
 import { Avatar, Badge, Group, Paper, Stack, Text, Title } from '@mantine/core'
 import type { components } from '../../api/client'
-import { formatDuration, initials, timeZoneNote } from '../../format'
+import { formatDuration, initials, NOTE_COLOR, timeZoneNote } from '../../format'
 import { formatDay, formatRange, type Slot } from './schedule'
 
 type MeetingType = components['schemas']['MeetingType']
@@ -45,7 +45,7 @@ export function BookingSummary({
           <Text size="sm">{formatRange(selected)}</Text>
         </Paper>
       )}
-      <Text size="xs" c="dimmed">
+      <Text size="sm" c={NOTE_COLOR}>
         {timeZoneNote(owner?.timeZone)}
       </Text>
     </Stack>

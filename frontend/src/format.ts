@@ -28,6 +28,12 @@ export const timeZoneNote = (ownerTimeZone?: string) =>
   `Время показано в вашем часовом поясе (${browserTimeZone()}).` +
   (ownerTimeZone ? ` Владелец работает по времени ${zoneName(ownerTimeZone)}, пн–пт 09:00–18:00.` : '')
 
+/**
+ * Цвет подсказки о часовом поясе: `dimmed` (gray.6) на белом даёт контраст ~3.3:1 и на телефоне
+ * почти не читается; gray.7 — ~8:1 (WCAG AA), в тёмной теме — dark.1.
+ */
+export const NOTE_COLOR = 'light-dark(var(--mantine-color-gray-7), var(--mantine-color-dark-1))'
+
 /** Инициалы вместо аватара: первые буквы первых двух слов имени. */
 export const initials = (name: string) =>
   name
