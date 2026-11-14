@@ -1,0 +1,24 @@
+# Release PR по Conventional Commits: на каждый push в main release-please обновляет PR с
+# CHANGELOG.md и версией; слияние этого PR создаёт тег и GitHub Release.
+# Нужна настройка репозитория: Settings → Actions → General →
+# «Allow GitHub Actions to create and approve pull requests».
+name: release-please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
